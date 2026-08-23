@@ -54,9 +54,15 @@ class ChartWorkspacePage extends StatefulWidget {
 }
 
 class _ChartWorkspacePageState extends State<ChartWorkspacePage> {
+  final MarketDataSource _dataSource = TwelveDataMarketDataSource();
+
   String _selectedTicker = 'NEXON';
   String _selectedRange = '1D';
-  late List<MarketBar> _bars;
+  List<MarketBar> _bars = const <MarketBar>[];
+  bool _isLoading = true;
+  String? _errorMessage;
+  DateTime? _latestBarTime;
+  int _loadSequence = 0;
   Set<IndicatorKind> _activeIndicators = <IndicatorKind>{
     IndicatorKind.trendRibbon,
     IndicatorKind.bollingerSqueeze,
@@ -65,18 +71,61 @@ class _ChartWorkspacePageState extends State<ChartWorkspacePage> {
   @override
   void initState() {
     super.initState();
-    _bars = DemoMarketDataSource.barsFor(_selectedTicker);
+    _loadBars();
   }
 
   MarketSymbol get _symbol => DemoMarketDataSource.symbolFor(_selectedTicker);
-  double get _lastPrice => _bars.last.close;
-  double get _lastChange => (_bars.last.close / _bars[_bars.length - 2].close - 1) * 100;
+  double? get _lastPrice => _bars.isEmpty ? null : _bars.last.close;
+  double? get _lastChange => _bars.length < 2 ? null : (_bars.last.close / _bars[_bars.length - 2].close - 1) * 100;
 
   void _selectTicker(String ticker) {
     setState(() {
       _selectedTicker = ticker;
-      _bars = DemoMarketDataSource.barsFor(ticker);
     });
+    _loadBars();
+  }
+
+  void _selectRange(String range) {
+    if (range == _selectedRange) return;
+    setState(() => _selectedRange = range);
+    _loadBars();
+  }
+
+  Future<void> _loadBars() async {
+    final requestTicker = _selectedTicker;
+    final requestRange = _selectedRange;
+    final requestSequence = ++_loadSequence;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final bars = await _dataSource.barsFor(requestTicker, range: requestRange);
+      if (!mounted || requestSequence != _loadSequence) return;
+      setState(() {
+        _bars = bars;
+        _latestBarTime = bars.last.time;
+        _isLoading = false;
+        _errorMessage = null;
+      });
+    } on MarketDataException catch (error) {
+      if (!mounted || requestSequence != _loadSequence) return;
+      setState(() {
+        _bars = const <MarketBar>[];
+        _latestBarTime = null;
+        _isLoading = false;
+        _errorMessage = error.message;
+      });
+    } catch (error) {
+      if (!mounted || requestSequence != _loadSequence) return;
+      setState(() {
+        _bars = const <MarketBar>[];
+        _latestBarTime = null;
+        _isLoading = false;
+        _errorMessage = '실데이터를 불러오지 못했습니다.\n$error';
+      });
+    }
   }
 
   void _toggleIndicator(IndicatorKind kind) {
@@ -91,7 +140,10 @@ class _ChartWorkspacePageState extends State<ChartWorkspacePage> {
       body: SafeArea(
         child: Column(
           children: [
-            const _TopNavigation(),
+            _TopNavigation(
+              isLoading: _isLoading,
+              hasError: _errorMessage != null,
+            ),
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -117,10 +169,14 @@ class _ChartWorkspacePageState extends State<ChartWorkspacePage> {
             lastChange: _lastChange,
             selectedRange: _selectedRange,
             onTickerChanged: _selectTicker,
-            onRangeChanged: (range) => setState(() => _selectedRange = range),
+            onRangeChanged: _selectRange,
           ),
           const SizedBox(height: 12),
-          const _MarketTickerStrip(),
+          _MarketTickerStrip(
+            symbol: _symbol,
+            latestBarTime: _latestBarTime,
+            isLoading: _isLoading,
+          ),
           const SizedBox(height: 16),
           Expanded(
             child: Row(
@@ -130,6 +186,10 @@ class _ChartWorkspacePageState extends State<ChartWorkspacePage> {
                   child: _ChartCard(
                     bars: _bars,
                     activeIndicators: _activeIndicators,
+                    isLoading: _isLoading,
+                    errorMessage: _errorMessage,
+                    onRetry: _loadBars,
+                    timeframeLabel: MarketTimeframe.fromRange(_selectedRange).label,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -160,16 +220,24 @@ class _ChartWorkspacePageState extends State<ChartWorkspacePage> {
             lastChange: _lastChange,
             selectedRange: _selectedRange,
             onTickerChanged: _selectTicker,
-            onRangeChanged: (range) => setState(() => _selectedRange = range),
+            onRangeChanged: _selectRange,
           ),
           const SizedBox(height: 10),
-          const _MarketTickerStrip(),
+          _MarketTickerStrip(
+            symbol: _symbol,
+            latestBarTime: _latestBarTime,
+            isLoading: _isLoading,
+          ),
           const SizedBox(height: 12),
           SizedBox(
             height: 510,
             child: _ChartCard(
               bars: _bars,
               activeIndicators: _activeIndicators,
+              isLoading: _isLoading,
+              errorMessage: _errorMessage,
+              onRetry: _loadBars,
+              timeframeLabel: MarketTimeframe.fromRange(_selectedRange).label,
             ),
           ),
           const SizedBox(height: 12),
@@ -185,7 +253,10 @@ class _ChartWorkspacePageState extends State<ChartWorkspacePage> {
 }
 
 class _TopNavigation extends StatelessWidget {
-  const _TopNavigation();
+  const _TopNavigation({required this.isLoading, required this.hasError});
+
+  final bool isLoading;
+  final bool hasError;
 
   @override
   Widget build(BuildContext context) {
@@ -218,7 +289,7 @@ class _TopNavigation extends StatelessWidget {
               if (!compact) ...[
                 _TopAction(icon: Icons.notifications_none_rounded, onPressed: () {}),
                 const SizedBox(width: 8),
-                const _StatusBadge(),
+                _StatusBadge(isLoading: isLoading, hasError: hasError),
                 const SizedBox(width: 16),
               ],
               const _Avatar(),
@@ -308,19 +379,28 @@ class _TopAction extends StatelessWidget {
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge();
+  const _StatusBadge({required this.isLoading, required this.hasError});
+
+  final bool isLoading;
+  final bool hasError;
 
   @override
   Widget build(BuildContext context) {
+    final label = hasError
+        ? 'SETUP REQUIRED'
+        : isLoading
+            ? 'LOADING'
+            : 'REAL DATA';
+    final accent = hasError ? _Palette.disabled : _Palette.green;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      color: const Color(0xffeefaf2),
-      child: const Row(
+      color: hasError ? const Color(0xfff2f3f4) : const Color(0xffeefaf2),
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(width: 6, height: 6, child: DecoratedBox(decoration: BoxDecoration(color: _Palette.green, shape: BoxShape.circle))),
+          SizedBox(width: 6, height: 6, child: DecoratedBox(decoration: BoxDecoration(color: accent, shape: BoxShape.circle))),
           SizedBox(width: 6),
-          Text('DEMO FEED', style: TextStyle(color: _Palette.label, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .6)),
+          Text(label, style: TextStyle(color: _Palette.label, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .6)),
         ],
       ),
     );
@@ -353,8 +433,8 @@ class _WorkspaceHeader extends StatelessWidget {
   });
 
   final MarketSymbol symbol;
-  final double lastPrice;
-  final double lastChange;
+  final double? lastPrice;
+  final double? lastChange;
   final String selectedRange;
   final ValueChanged<String> onTickerChanged;
   final ValueChanged<String> onRangeChanged;
@@ -364,6 +444,7 @@ class _WorkspaceHeader extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 600;
+        final change = lastChange;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -395,11 +476,21 @@ class _WorkspaceHeader extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  '${lastChange >= 0 ? '+' : ''}${lastChange.toStringAsFixed(2)}%',
-                  style: TextStyle(color: lastChange >= 0 ? _Palette.green : const Color(0xffd94d5b), fontSize: 13, fontWeight: FontWeight.w700),
+                  change == null
+                      ? '—'
+                      : '${change >= 0 ? '+' : ''}${change.toStringAsFixed(2)}%',
+                  style: TextStyle(
+                    color: change == null
+                        ? _Palette.muted
+                        : change >= 0
+                            ? _Palette.green
+                            : const Color(0xffd94d5b),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(width: 6),
-                const Text('today', style: TextStyle(color: _Palette.muted, fontSize: 11)),
+                const Text('vs prev bar', style: TextStyle(color: _Palette.muted, fontSize: 11)),
                 if (compact) ...[
                   const Spacer(),
                   _RangeSelector(selectedRange: selectedRange, onChanged: onRangeChanged),
@@ -476,7 +567,15 @@ class _RangeSelector extends StatelessWidget {
 }
 
 class _MarketTickerStrip extends StatelessWidget {
-  const _MarketTickerStrip();
+  const _MarketTickerStrip({
+    required this.symbol,
+    required this.latestBarTime,
+    required this.isLoading,
+  });
+
+  final MarketSymbol symbol;
+  final DateTime? latestBarTime;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -484,15 +583,16 @@ class _MarketTickerStrip extends StatelessWidget {
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 700;
         final items = <Widget>[
-          const Text('MARKET PULSE', style: TextStyle(color: _Palette.muted, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .8)),
+          const Text('MARKET DATA', style: TextStyle(color: _Palette.muted, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .8)),
           const SizedBox(width: 18),
-          _ticker('KOSPI', '+0.82%', true),
-          _ticker('KOSDAQ', '+1.14%', true),
-          _ticker('NASDAQ', '+0.46%', true),
-          _ticker('USD/KRW', '1,386.40', false),
+          _ticker('SYMBOL', symbol.ticker),
+          _ticker('EXCHANGE', symbol.exchange),
           if (!compact) ...[
             const Spacer(),
-            const Text('LAST UPDATE  14:28:05', style: TextStyle(color: _Palette.muted, fontSize: 9, letterSpacing: .3)),
+            Text(
+              isLoading ? 'LOADING' : _lastBarLabel(latestBarTime),
+              style: const TextStyle(color: _Palette.muted, fontSize: 9, letterSpacing: .3),
+            ),
           ],
         ];
         final row = Row(children: items);
@@ -512,26 +612,44 @@ class _MarketTickerStrip extends StatelessWidget {
     );
   }
 
-  Widget _ticker(String label, String value, bool positive) {
+  Widget _ticker(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(right: 20),
       child: RichText(
         text: TextSpan(
           children: [
             TextSpan(text: '$label  ', style: const TextStyle(color: _Palette.body, fontSize: 10)),
-            TextSpan(text: value, style: TextStyle(color: positive ? _Palette.green : _Palette.ink, fontSize: 10, fontWeight: FontWeight.w700)),
+            TextSpan(text: value, style: const TextStyle(color: _Palette.ink, fontSize: 10, fontWeight: FontWeight.w700)),
           ],
         ),
       ),
     );
   }
+
+  String _lastBarLabel(DateTime? value) {
+    if (value == null) return 'NO DATA';
+    final date = '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+    final time = '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+    return 'LAST BAR  $date $time';
+  }
 }
 
 class _ChartCard extends StatelessWidget {
-  const _ChartCard({required this.bars, required this.activeIndicators});
+  const _ChartCard({
+    required this.bars,
+    required this.activeIndicators,
+    required this.isLoading,
+    required this.errorMessage,
+    required this.onRetry,
+    required this.timeframeLabel,
+  });
 
   final List<MarketBar> bars;
   final Set<IndicatorKind> activeIndicators;
+  final bool isLoading;
+  final String? errorMessage;
+  final VoidCallback onRetry;
+  final String timeframeLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -548,7 +666,7 @@ class _ChartCard extends StatelessWidget {
             children: [
               const Text('CANDLESTICK', style: TextStyle(color: _Palette.label, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: .7)),
               const SizedBox(width: 8),
-              const Text('Daily', style: TextStyle(color: _Palette.muted, fontSize: 10)),
+              Text(timeframeLabel, style: const TextStyle(color: _Palette.muted, fontSize: 10)),
               const Spacer(),
               const Icon(Icons.open_with_rounded, size: 15, color: _Palette.muted),
               const SizedBox(width: 6),
@@ -556,8 +674,60 @@ class _ChartCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Expanded(child: MarketChart(bars: bars, activeIndicators: activeIndicators)),
+          Expanded(
+            child: isLoading
+                ? const _ChartMessage(message: '실데이터를 불러오는 중입니다.')
+                : errorMessage != null
+                    ? _ChartMessage(message: errorMessage!, isError: true, onRetry: onRetry)
+                    : MarketChart(bars: bars, activeIndicators: activeIndicators),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _ChartMessage extends StatelessWidget {
+  const _ChartMessage({required this.message, this.isError = false, this.onRetry});
+
+  final String message;
+  final bool isError;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isError ? Icons.cloud_off_outlined : Icons.sync_rounded,
+              color: _Palette.muted,
+              size: 28,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: _Palette.body, fontSize: 12, height: 1.45),
+            ),
+            if (isError && onRetry != null) ...[
+              const SizedBox(height: 14),
+              TextButton(
+                onPressed: onRetry,
+                style: TextButton.styleFrom(
+                  backgroundColor: _Palette.green,
+                  foregroundColor: Colors.black,
+                  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                ),
+                child: const Text('다시 시도', style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -601,7 +771,7 @@ class _IndicatorPanel extends StatelessWidget {
               children: [
                 Icon(Icons.info_outline_rounded, size: 15, color: _Palette.muted),
                 SizedBox(width: 7),
-                Expanded(child: Text('현재는 데모 데이터입니다. 실제 시세 연결 시 신호 계산 모듈은 그대로 재사용할 수 있습니다.', style: TextStyle(color: _Palette.body, fontSize: 10, height: 1.35))),
+                Expanded(child: Text('실데이터 OHLCV를 기준으로 6개 분석 도구를 계산합니다. 데이터 지연 여부는 공급자 플랜에 따라 달라질 수 있습니다.', style: TextStyle(color: _Palette.body, fontSize: 10, height: 1.35))),
               ],
             ),
           ),
@@ -674,4 +844,7 @@ class _IndicatorTile extends StatelessWidget {
   }
 }
 
-String _priceText(double value) => value >= 1000 ? value.toStringAsFixed(0) : value.toStringAsFixed(2);
+String _priceText(double? value) {
+  if (value == null) return '—';
+  return value >= 1000 ? value.toStringAsFixed(0) : value.toStringAsFixed(2);
+}
