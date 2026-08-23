@@ -88,14 +88,17 @@ class DemoMarketDataSource {
           .clamp(symbol.basePrice * 0.72, symbol.basePrice * 1.48)
           .toDouble();
       final intraday = (math.sin(index * 2.2 + seed) + 2.3).abs();
-      final high = math.max(open, close).toDouble() *
-          (1 + volatility * (0.45 + intraday * 0.18));
-      final low = math.min(open, close).toDouble() *
-          (1 - volatility * (0.45 + intraday * 0.15));
-      final volume = (1000000 +
-              530000 * (1 + math.sin(index / 5 + seed)) +
-              (index % 17 == 0 ? 1800000 : 0)) *
-          (symbol.basePrice > 1000 ? 0.62 : 1.0).toDouble();
+      final high = (math.max(open, close).toDouble() *
+              (1 + volatility * (0.45 + intraday * 0.18)))
+          .toDouble();
+      final low = (math.min(open, close).toDouble() *
+              (1 - volatility * (0.45 + intraday * 0.15)))
+          .toDouble();
+      final volume = ((1000000 +
+                  530000 * (1 + math.sin(index / 5 + seed)) +
+                  (index % 17 == 0 ? 1800000 : 0)) *
+              (symbol.basePrice > 1000 ? 0.62 : 1.0))
+          .toDouble();
       previousClose = close;
 
       return MarketBar(
