@@ -4,7 +4,7 @@ import 'package:pulse_chart/indicators/indicator_calculations.dart';
 import 'package:pulse_chart/models/market_data.dart';
 
 void main() {
-  test('demo bars keep valid OHLC relationships', () {
+  test('fixture bars keep valid OHLC relationships', () {
     final bars = DemoMarketDataSource.barsFor('NEXON');
 
     expect(bars, hasLength(180));
@@ -15,6 +15,35 @@ void main() {
       expect(bar.low, lessThanOrEqualTo(bar.close));
       expect(bar.volume, greaterThan(0));
     }
+  });
+
+  test('Twelve Data values are parsed in ascending time order', () {
+    final bars = TwelveDataMarketDataSource.parseBars({
+      'status': 'ok',
+      'values': [
+        {
+          'datetime': '2026-08-24 10:00:00',
+          'open': '102.0',
+          'high': '105.0',
+          'low': '101.0',
+          'close': '104.0',
+          'volume': '1200',
+        },
+        {
+          'datetime': '2026-08-24 09:00:00',
+          'open': '100.0',
+          'high': '103.0',
+          'low': '99.0',
+          'close': '102.0',
+          'volume': '900',
+        },
+      ],
+    });
+
+    expect(bars, hasLength(2));
+    expect(bars.first.close, 102);
+    expect(bars.last.close, 104);
+    expect(bars.first.time.isBefore(bars.last.time), isTrue);
   });
 
   test('RSI is bounded between zero and one hundred', () {
