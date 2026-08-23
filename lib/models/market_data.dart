@@ -40,21 +40,21 @@ class DemoMarketDataSource {
       ticker: 'NEXON',
       name: '넥슨게임즈',
       exchange: 'KOSDAQ',
-      basePrice: 18_650,
+      basePrice: 18650,
       change: 3.42,
     ),
     MarketSymbol(
       ticker: 'NAVER',
       name: 'NAVER',
       exchange: 'KOSPI',
-      basePrice: 214_500,
+      basePrice: 214500,
       change: 1.86,
     ),
     MarketSymbol(
       ticker: 'SAMSUNG',
       name: '삼성전자',
       exchange: 'KOSPI',
-      basePrice: 81_200,
+      basePrice: 81200,
       change: -0.74,
     ),
     MarketSymbol(
@@ -92,9 +92,9 @@ class DemoMarketDataSource {
           (1 + volatility * (0.45 + intraday * 0.18));
       final low = math.min(open, close).toDouble() *
           (1 - volatility * (0.45 + intraday * 0.15));
-      final volume = (1_000_000 +
-              530_000 * (1 + math.sin(index / 5 + seed)) +
-              (index % 17 == 0 ? 1_800_000 : 0)) *
+      final volume = (1000000 +
+              530000 * (1 + math.sin(index / 5 + seed)) +
+              (index % 17 == 0 ? 1800000 : 0)) *
           (symbol.basePrice > 1000 ? 0.62 : 1.0).toDouble();
       previousClose = close;
 
