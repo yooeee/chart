@@ -111,26 +111,28 @@ class _MarketChartState extends State<MarketChart> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return Listener(
-          onPointerHover: (event) => _updateHover(event.localPosition, constraints.maxWidth),
-          onPointerMove: (event) => _updateHover(event.localPosition, constraints.maxWidth),
-          onPointerExit: (_) => setState(() => _hoverIndex = null),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onScaleStart: (_) => _zoomAtGestureStart = _zoom,
-            onScaleUpdate: (details) {
-              final next = (_zoomAtGestureStart * details.scale).clamp(1.0, 4.5).toDouble();
-              if (next != _zoom) setState(() => _zoom = next);
-            },
-            onDoubleTap: () => setState(() => _zoom = 1),
-            child: CustomPaint(
-              painter: _MarketChartPainter(
-                bars: widget.bars,
-                activeIndicators: widget.activeIndicators,
-                zoom: _zoom,
-                hoverIndex: _hoverIndex,
+        return MouseRegion(
+          onExit: (_) => setState(() => _hoverIndex = null),
+          child: Listener(
+            onPointerHover: (event) => _updateHover(event.localPosition, constraints.maxWidth),
+            onPointerMove: (event) => _updateHover(event.localPosition, constraints.maxWidth),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onScaleStart: (_) => _zoomAtGestureStart = _zoom,
+              onScaleUpdate: (details) {
+                final next = (_zoomAtGestureStart * details.scale).clamp(1.0, 4.5).toDouble();
+                if (next != _zoom) setState(() => _zoom = next);
+              },
+              onDoubleTap: () => setState(() => _zoom = 1),
+              child: CustomPaint(
+                painter: _MarketChartPainter(
+                  bars: widget.bars,
+                  activeIndicators: widget.activeIndicators,
+                  zoom: _zoom,
+                  hoverIndex: _hoverIndex,
+                ),
+                child: const SizedBox.expand(),
               ),
-              child: const SizedBox.expand(),
             ),
           ),
         );
@@ -337,10 +339,10 @@ class _MarketChartPainter extends CustomPainter {
       minValue = -100;
       maxValue = 100;
     } else {
-      final values = <double>[...
-        first.whereType<double>(),
-        second.whereType<double>(),
-        third.whereType<double>(),
+      final values = <double>[
+        ...first.whereType<double>(),
+        ...second.whereType<double>(),
+        ...third.whereType<double>(),
       ];
       if (values.isNotEmpty) {
         minValue = values.reduce((a, b) => math.min(a, b).toDouble());
