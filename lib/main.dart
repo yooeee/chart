@@ -38,7 +38,6 @@ class PulseChartApp extends StatelessWidget {
 class _Palette {
   static const green = Color(0xff00de5a);
   static const ink = Color(0xff17191d);
-  static const nearBlack = Color(0xff080410);
   static const body = Color(0xff737881);
   static const label = Color(0xff4a4e57);
   static const muted = Color(0xff919191);
