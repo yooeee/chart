@@ -224,7 +224,7 @@ class _MarketChartPainter extends CustomPainter {
     final plotTop = rect.top + 12;
     final plotBottom = rect.bottom - volumeHeight - 12;
     final candleWidth = math.max(2.0, math.min(11.0, _chartWidth / _visibleCount * 0.66)).toDouble();
-    final y = (double value) =>
+    double y(double value) =>
         plotBottom - (value - minPrice) / (maxPrice - minPrice) * (plotBottom - plotTop);
 
     _drawGrid(canvas, rect, minPrice, maxPrice, y);
@@ -353,7 +353,7 @@ class _MarketChartPainter extends CustomPainter {
       }
     }
     if (maxValue <= minValue) maxValue = minValue + 1;
-    final y = (double value) =>
+    double y(double value) =>
         rect.bottom - 8 - (value - minValue) / (maxValue - minValue) * (rect.height - 25);
 
     if (kind == IndicatorKind.rsiPulse) {
