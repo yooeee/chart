@@ -21,6 +21,8 @@ flutter run -d ios
 flutter run -d android
 ```
 
+`main`에 push하면 GitHub Actions가 Android release APK를 빌드합니다. 빌드가 성공하면 Actions 실행 화면의 `pulse-chart-release-apk` 아티팩트에서 APK를 받을 수 있습니다. 수동 실행은 `Actions > Flutter checks > Run workflow`에서 할 수 있습니다.
+
 현재 데이터는 `lib/models/market_data.dart`의 deterministic demo feed입니다. 실제 거래소 또는 시세 API를 연결할 때는 `DemoMarketDataSource`를 실시간 데이터 소스로 교체하면 화면과 지표 계산 코드는 그대로 사용할 수 있습니다.
 
 > 투자 판단을 위한 신호가 아니라 UI·계산 구조를 검증하기 위한 샘플 앱입니다.
