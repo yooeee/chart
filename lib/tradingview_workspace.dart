@@ -737,7 +737,7 @@ class _TradingViewIntroHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final heroPadding = compact ? 22.0 : 36.0;
     return Container(
-      constraints: BoxConstraints(minHeight: compact ? 620 : 330),
+      height: compact ? 620 : 330,
       decoration: const BoxDecoration(
         color: _TradingViewPalette.ink,
         border: Border(
