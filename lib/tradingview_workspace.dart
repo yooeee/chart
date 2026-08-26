@@ -551,6 +551,15 @@ class _TradingViewIntroductionPageState
     _pageTransitionController.forward(from: 0);
   }
 
+  void _goToPage(int page) {
+    if (page == _activePage) return;
+    _pageController.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 620),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   double _pageValue() {
     if (!_pageController.hasClients) {
       return _activePage.toDouble();
@@ -576,72 +585,237 @@ class _TradingViewIntroductionPageState
             behavior: const MaterialScrollBehavior().copyWith(
               scrollbars: false,
             ),
-            child: PageView.builder(
-              controller: _pageController,
-              scrollDirection: Axis.vertical,
-              physics: const PageScrollPhysics(),
-              pageSnapping: true,
-              itemCount: _studies.length + 1,
-              onPageChanged: _handlePageChanged,
-              itemBuilder: (context, index) {
-                return AnimatedBuilder(
-                  animation: Listenable.merge(<Listenable>[
-                    _pageController,
-                    _pageTransitionController,
-                    _motionController,
-                  ]),
-                  builder: (context, child) {
-                    final page = _pageValue();
-                    final distance =
-                        (page - index).abs().clamp(0.0, 1.0).toDouble();
-                    final focus = 1.0 - distance;
-                    final transition = Curves.easeOutCubic.transform(
-                      _pageTransitionController.value,
-                    );
-                    final activeEntry =
-                        index == _activePage ? transition : 1.0;
-                    final direction = index < page ? -1.0 : 1.0;
-                    final offsetY = index == _activePage
-                        ? (1.0 - activeEntry) * 30
-                        : direction * distance * 18;
-                    final opacity = ((.46 + focus * .54) *
-                            (.70 + activeEntry * .30))
-                        .clamp(0.0, 1.0)
-                        .toDouble();
-                    final scale = .965 + focus * .035;
+            child: Stack(
+              children: [
+                PageView.builder(
+                  controller: _pageController,
+                  scrollDirection: Axis.vertical,
+                  physics: const PageScrollPhysics(),
+                  pageSnapping: true,
+                  itemCount: _studies.length + 1,
+                  onPageChanged: _handlePageChanged,
+                  itemBuilder: (context, index) {
+                    return AnimatedBuilder(
+                      animation: Listenable.merge(<Listenable>[
+                        _pageController,
+                        _pageTransitionController,
+                        _motionController,
+                      ]),
+                      builder: (context, child) {
+                        final page = _pageValue();
+                        final distance =
+                            (page - index).abs().clamp(0.0, 1.0).toDouble();
+                        final focus = 1.0 - distance;
+                        final transition = Curves.easeOutCubic.transform(
+                          _pageTransitionController.value,
+                        );
+                        final activeEntry =
+                            index == _activePage ? transition : 1.0;
+                        final direction = index < page ? -1.0 : 1.0;
+                        final offsetY = index == _activePage
+                            ? (1.0 - activeEntry) * 30
+                            : direction * distance * 18;
+                        final opacity = ((.46 + focus * .54) *
+                                (.70 + activeEntry * .30))
+                            .clamp(0.0, 1.0)
+                            .toDouble();
+                        final scale = .965 + focus * .035;
 
-                    final pageContent = index == 0
-                        ? _TradingViewScrollIntroHero(
-                            compact: compact,
-                            focus: focus,
-                            progress: _motionController.value,
-                            onOpenChart: widget.onOpenChart,
-                          )
-                        : _TradingViewScrollStudySlide(
-                            data: _studies[index - 1],
-                            studyIndex: index - 1,
-                            compact: compact,
-                            focus: focus,
-                            progress: _motionController.value,
-                          );
+                        final pageContent = index == 0
+                            ? _TradingViewScrollIntroHero(
+                                compact: compact,
+                                focus: focus,
+                                progress: _motionController.value,
+                                onOpenChart: widget.onOpenChart,
+                              )
+                            : _TradingViewScrollStudySlide(
+                                data: _studies[index - 1],
+                                studyIndex: index - 1,
+                                compact: compact,
+                                focus: focus,
+                                progress: _motionController.value,
+                              );
 
-                    return Opacity(
-                      opacity: opacity,
-                      child: Transform.translate(
-                        offset: Offset(0, offsetY),
-                        child: Transform.scale(
-                          scale: scale,
-                          child: pageContent,
-                        ),
-                      ),
+                        return Opacity(
+                          opacity: opacity,
+                          child: Transform.translate(
+                            offset: Offset(0, offsetY),
+                            child: Transform.scale(
+                              scale: scale,
+                              child: pageContent,
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
-                );
-              },
+                ),
+                if (compact)
+                  Positioned(
+                    right: 14,
+                    bottom: 14,
+                    child: _TradingViewSceneRail(
+                      activePage: _activePage,
+                      compact: true,
+                      onSelect: _goToPage,
+                    ),
+                  )
+                else
+                  Positioned(
+                    top: 0,
+                    bottom: 0,
+                    right: 26,
+                    width: 112,
+                    child: Center(
+                      child: _TradingViewSceneRail(
+                        activePage: _activePage,
+                        compact: false,
+                        onSelect: _goToPage,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _TradingViewSceneRail extends StatelessWidget {
+  const _TradingViewSceneRail({
+    required this.activePage,
+    required this.compact,
+    required this.onSelect,
+  });
+
+  static const _labels = <String>[
+    'INTRO',
+    'TREND',
+    'RSI',
+    'MACD',
+    'BOLL',
+    'V-PRESS',
+    'FLOW',
+  ];
+
+  static const _colors = <Color>[
+    _TradingViewPalette.green,
+    _TradingViewPalette.green,
+    Color(0xff9d8cff),
+    Color(0xff7eafff),
+    Color(0xff62b5ff),
+    Color(0xffffc857),
+    Color(0xffff8f70),
+  ];
+
+  final int activePage;
+  final bool compact;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xee17191d),
+        border: Border.all(color: const Color(0x4dffffff)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x25000000),
+            offset: Offset(0, 8),
+            blurRadius: 20,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 10 : 9,
+          vertical: compact ? 8 : 10,
+        ),
+        child: compact ? _compactRail() : _desktopRail(),
+      ),
+    );
+  }
+
+  Widget _compactRail() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          _labels[activePage],
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 8,
+            fontWeight: FontWeight.w800,
+            letterSpacing: .8,
+          ),
+        ),
+        const SizedBox(width: 10),
+        for (var index = 0; index < _labels.length; index++)
+          _railSegment(index),
+      ],
+    );
+  }
+
+  Widget _desktopRail() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        const Text(
+          'SCENE MAP',
+          style: TextStyle(
+            color: Color(0xffaab3b5),
+            fontSize: 8,
+            fontWeight: FontWeight.w800,
+            letterSpacing: .9,
+          ),
+        ),
+        const SizedBox(height: 8),
+        for (var index = 0; index < _labels.length; index++)
+          _railSegment(index),
+      ],
+    );
+  }
+
+  Widget _railSegment(int index) {
+    final active = index == activePage;
+    final color = _colors[index];
+    return InkWell(
+      onTap: () => onSelect(index),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!compact && active) ...[
+              Text(
+                _labels[index],
+                style: TextStyle(
+                  color: color,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: .7,
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              width: compact
+                  ? (active ? 18 : 5)
+                  : (active ? 22 : 5),
+              height: 4,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: active ? 1 : .28),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -774,14 +948,10 @@ class _TradingViewScrollIntroHero extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
-                        const Text(
-                          '01 / 07',
-                          style: TextStyle(
-                            color: _TradingViewPalette.green,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1,
-                          ),
+                        const Icon(
+                          Icons.south_rounded,
+                          color: Color(0xffaab3b5),
+                          size: 16,
                         ),
                       ],
                     ),
@@ -907,7 +1077,7 @@ class _TradingViewScrollSignalTerminal extends StatelessWidget {
             right: 10,
             top: 9,
             child: Text(
-              '07 SCENES',
+              'SCROLL MAP',
               style: TextStyle(
                 color: _TradingViewPalette.green,
                 fontSize: 8,
@@ -1111,16 +1281,14 @@ class _TradingViewScrollStudySlide extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
-                        Text(
+                        Icon(
                           studyIndex == _TradingViewIntroductionPageState._studies.length - 1
-                              ? '06 / 06'
-                              : '0${studyIndex + 1} / 06',
-                          style: const TextStyle(
-                            color: _TradingViewPalette.label,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: .9,
-                          ),
+                              ? Icons.arrow_outward_rounded
+                              : Icons.south_rounded,
+                          color: studyIndex == _TradingViewIntroductionPageState._studies.length - 1
+                              ? data.accent
+                              : _TradingViewPalette.muted,
+                          size: 15,
                         ),
                       ],
                     ),
@@ -1181,7 +1349,7 @@ class _TradingViewScrollStudyHeader extends StatelessWidget {
             ),
             const SizedBox(width: 9),
             Text(
-              'STUDY ${data.number}',
+              'ACTIVE SIGNAL',
               style: const TextStyle(
                 color: _TradingViewPalette.ink,
                 fontSize: 9,
@@ -1203,10 +1371,10 @@ class _TradingViewScrollStudyHeader extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            Text(
-              '${data.number} / 06',
-              style: const TextStyle(
-                color: _TradingViewPalette.label,
+            const Text(
+              'FOCUS MODE',
+              style: TextStyle(
+                color: _TradingViewPalette.green,
                 fontSize: 9,
                 fontWeight: FontWeight.w800,
                 letterSpacing: .8,
