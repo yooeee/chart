@@ -29,12 +29,47 @@ jobs:
         with:
           channel: stable
           cache: true
-      - run: flutter create --platforms=android .
+      - name: Generate Android platform
+        run: flutter create --platforms=android .
+      - name: Configure Android WebView
+        shell: bash
+        run: |
+          if [ -f android/app/build.gradle.kts ]; then
+            sed -i.bak 's/minSdk = flutter.minSdkVersion/minSdk = 24/' android/app/build.gradle.kts
+          elif [ -f android/app/build.gradle ]; then
+            sed -i.bak 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 24/' android/app/build.gradle
+          fi
+          manifest="android/app/src/main/AndroidManifest.xml"
+          if ! grep -q 'android.permission.INTERNET' "$manifest"; then
+            sed -i.bak 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n    <uses-permission android:name="android.permission.INTERNET" />#' "$manifest"
+          fi
       - run: flutter pub get
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
         with:
           name: pulse-chart-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  build-ios-unsigned:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate iOS platform
+        run: flutter create --platforms=ios .
+      - run: flutter pub get
+      - name: Build unsigned iOS app
+        run: flutter build ios --release --no-codesign
+      - name: Archive unsigned iOS app
+        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app pulse-chart-ios-release-unsigned.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pulse-chart-ios-release-unsigned
+          path: pulse-chart-ios-release-unsigned.zip
           if-no-files-found: error
           retention-days: 14
