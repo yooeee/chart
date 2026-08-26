@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'models/market_data.dart';
+import 'tradingview_workspace.dart';
 import 'widgets/market_chart.dart';
 
 void main() {
@@ -30,7 +32,7 @@ class PulseChartApp extends StatelessWidget {
           selectionHandleColor: _Palette.green,
         ),
       ),
-      home: const ChartWorkspacePage(),
+      home: kIsWeb ? const TradingViewWorkspacePage() : const ChartWorkspacePage(),
     );
   }
 }
