@@ -169,14 +169,19 @@ class _TradingViewChartPage extends StatelessWidget {
                 market: market,
                 onMarketChanged: onMarketChanged,
               ),
-              const SizedBox(height: 12),
-              _TradingViewMarketStrip(market: market),
-              const SizedBox(height: 12),
+              if (!compact) ...[
+                const SizedBox(height: 12),
+                _TradingViewMarketStrip(market: market),
+                const SizedBox(height: 12),
+              ] else
+                const SizedBox(height: 6),
               _TradingViewIndicatorToolbar(
                 onSelected: onIndicatorSelected,
               ),
-              const SizedBox(height: 14),
-              Expanded(child: _TradingViewChartCard(market: market)),
+              SizedBox(height: compact ? 6 : 14),
+              Expanded(
+                child: _TradingViewChartCard(market: market),
+              ),
             ],
           ),
         );
@@ -2507,7 +2512,7 @@ class _TradingViewChartCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: _TradingViewPalette.border),
@@ -2515,34 +2520,62 @@ class _TradingViewChartCard extends StatelessWidget {
           BoxShadow(color: Color(0x0d000000), offset: Offset(0, 2), blurRadius: 8),
         ],
       ),
-      child: Column(
-        children: [
-          Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 520;
+          return Column(
             children: [
-              const Text(
-                'LIVE CHART',
-                style: TextStyle(color: _TradingViewPalette.label, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: .7),
+              Row(
+                children: [
+                  const Text(
+                    'LIVE CHART',
+                    style: TextStyle(
+                      color: _TradingViewPalette.label,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: .7,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      market.tradingViewSymbol,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _TradingViewPalette.muted,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                  if (!compact) ...[
+                    const SizedBox(width: 10),
+                    const Icon(
+                      Icons.open_with_rounded,
+                      size: 15,
+                      color: _TradingViewPalette.muted,
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'TradingView에서 시간봉 선택',
+                      style: TextStyle(
+                        color: _TradingViewPalette.muted,
+                        fontSize: 9,
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(width: 8),
-              Text(
-                market.tradingViewSymbol,
-                style: const TextStyle(color: _TradingViewPalette.muted, fontSize: 10),
+              SizedBox(height: compact ? 4 : 6),
+              Expanded(
+                child: TradingViewChart(
+                  key: ValueKey(market.tradingViewSymbol),
+                  symbol: market.tradingViewSymbol,
+                  interval: 'D',
+                ),
               ),
-              const Spacer(),
-              const Icon(Icons.open_with_rounded, size: 15, color: _TradingViewPalette.muted),
-              const SizedBox(width: 6),
-              const Text('TradingView에서 시간봉 선택', style: TextStyle(color: _TradingViewPalette.muted, fontSize: 9)),
             ],
-          ),
-          const SizedBox(height: 6),
-          Expanded(
-            child: TradingViewChart(
-              key: ValueKey(market.tradingViewSymbol),
-              symbol: market.tradingViewSymbol,
-              interval: 'D',
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
