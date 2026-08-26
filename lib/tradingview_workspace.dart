@@ -528,6 +528,14 @@ class _TradingViewIntroductionPageState
 
   late final AnimationController _entryController;
   late final AnimationController _motionController;
+  final GlobalKey _studyViewportKey = GlobalKey();
+  final List<GlobalKey> _studyKeys = List<GlobalKey>.generate(
+    _studies.length,
+    (_) => GlobalKey(),
+  );
+  final Set<int> _revealedStudies = <int>{0};
+  int _activeStudyIndex = 0;
+  bool _measureScheduled = false;
 
   @override
   void initState() {
@@ -540,6 +548,72 @@ class _TradingViewIntroductionPageState
       vsync: this,
       duration: const Duration(milliseconds: 2600),
     )..repeat();
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _scheduleStudyMeasure(),
+    );
+  }
+
+  bool _handleStudyScroll(ScrollNotification notification) {
+    if (notification.metrics.axis == Axis.vertical) {
+      _scheduleStudyMeasure();
+    }
+    return false;
+  }
+
+  void _scheduleStudyMeasure() {
+    if (_measureScheduled) return;
+    _measureScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measureScheduled = false;
+      if (mounted) _measureStudies();
+    });
+  }
+
+  void _measureStudies() {
+    final viewportObject =
+        _studyViewportKey.currentContext?.findRenderObject();
+    if (viewportObject is! RenderBox || !viewportObject.hasSize) return;
+
+    final viewportOrigin = viewportObject.localToGlobal(Offset.zero);
+    final viewportTop = viewportOrigin.dy;
+    final viewportBottom = viewportTop + viewportObject.size.height;
+    final focusY = viewportTop + viewportObject.size.height * .48;
+    final nextRevealed = <int>{..._revealedStudies};
+    var nextActive = _activeStudyIndex;
+    var nearestDistance = double.infinity;
+    var visibleStudyFound = false;
+
+    for (var index = 0; index < _studyKeys.length; index++) {
+      final cardObject = _studyKeys[index].currentContext?.findRenderObject();
+      if (cardObject is! RenderBox || !cardObject.hasSize) continue;
+
+      final cardOrigin = cardObject.localToGlobal(Offset.zero);
+      final cardTop = cardOrigin.dy;
+      final cardBottom = cardTop + cardObject.size.height;
+      final isVisible = cardBottom > viewportTop + 28 &&
+          cardTop < viewportBottom - 28;
+      if (!isVisible) continue;
+
+      visibleStudyFound = true;
+      nextRevealed.add(index);
+      final cardCenter = (cardTop + cardBottom) / 2;
+      final distance = (cardCenter - focusY).abs();
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nextActive = index;
+      }
+    }
+
+    if (!visibleStudyFound) return;
+    final revealChanged = nextRevealed.length != _revealedStudies.length;
+    if (revealChanged || nextActive != _activeStudyIndex) {
+      setState(() {
+        _revealedStudies
+          ..clear()
+          ..addAll(nextRevealed);
+        _activeStudyIndex = nextActive;
+      });
+    }
   }
 
   @override
@@ -569,7 +643,11 @@ class _TradingViewIntroductionPageState
         final lensWidth =
             (contentWidth - (lensColumns - 1) * 12) / lensColumns;
 
-        return SingleChildScrollView(
+        return SizedBox.expand(
+          key: _studyViewportKey,
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _handleStudyScroll,
+            child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             horizontal,
             compact ? 18 : 30,
@@ -692,9 +770,19 @@ class _TradingViewIntroductionPageState
                       ),
                     ],
                   ),
+                  const SizedBox(height: 18),
+                  _TradingViewIntroReveal(
+                    animation: _entryController,
+                    delay: .26,
+                    child: _TradingViewStudyProgress(
+                      compact: compact,
+                      activeIndex: _activeStudyIndex,
+                    ),
+                  ),
                   const SizedBox(height: 42),
                   for (var index = 0; index < _studies.length; index++)
                     Padding(
+                      key: _studyKeys[index],
                       padding: EdgeInsets.only(
                         bottom: index == _studies.length - 1 ? 0 : 14,
                       ),
@@ -705,6 +793,8 @@ class _TradingViewIntroductionPageState
                           data: _studies[index],
                           compact: compact,
                           pulseProgress: _motionController.value,
+                          revealed: _revealedStudies.contains(index),
+                          active: _activeStudyIndex == index,
                         ),
                       ),
                     ),
@@ -748,6 +838,8 @@ class _TradingViewIntroductionPageState
                 ],
               );
             },
+              ),
+            ),
           ),
         );
       },
@@ -1378,16 +1470,103 @@ class _TradingViewStudyLensCard extends StatelessWidget {
   }
 }
 
+
+
+class _TradingViewStudyProgress extends StatelessWidget {
+  const _TradingViewStudyProgress({
+    required this.compact,
+    required this.activeIndex,
+  });
+
+  final bool compact;
+  final int activeIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = Row(
+      children: [
+        const Text(
+          'SCROLL TO EXPLORE',
+          style: TextStyle(
+            color: _TradingViewPalette.label,
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+            letterSpacing: .9,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          (activeIndex + 1).toString().padLeft(2, '0') + ' / 06',
+          style: const TextStyle(
+            color: _TradingViewPalette.muted,
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            letterSpacing: .7,
+          ),
+        ),
+      ],
+    );
+    final segments = Row(
+      children: [
+        for (var index = 0; index < 6; index++)
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: index == 5 ? 0 : 5),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                height: 5,
+                color: index == activeIndex
+                    ? _TradingViewPalette.green
+                    : index < activeIndex
+                        ? const Color(0x5500de5a)
+                        : const Color(0xffe6e9eb),
+              ),
+            ),
+          ),
+      ],
+    );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: _TradingViewPalette.border),
+      ),
+      child: compact
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                label,
+                const SizedBox(height: 10),
+                segments,
+              ],
+            )
+          : Row(
+              children: [
+                Expanded(child: label),
+                const SizedBox(width: 22),
+                Expanded(flex: 2, child: segments),
+              ],
+            ),
+    );
+  }
+}
+
 class _TradingViewStudyCard extends StatelessWidget {
   const _TradingViewStudyCard({
     required this.data,
     required this.compact,
     required this.pulseProgress,
+    required this.revealed,
+    required this.active,
   });
 
   final _TradingViewStudyPreviewData data;
   final bool compact;
   final double pulseProgress;
+  final bool revealed;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
@@ -1400,64 +1579,74 @@ class _TradingViewStudyCard extends StatelessWidget {
       ),
     );
     final copy = _TradingViewStudyCopy(data: data);
-
-    if (compact) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: _TradingViewPalette.border),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0d000000),
-              offset: Offset(0, 2),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            visual,
-            const SizedBox(height: 18),
-            copy,
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(22),
+    final card = AnimatedContainer(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      padding: EdgeInsets.all(compact ? 16 : 22),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: _TradingViewPalette.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0d000000),
-            offset: Offset(0, 2),
-            blurRadius: 8,
-          ),
-        ],
+        border: Border.all(
+          color: active
+              ? _TradingViewPalette.green
+              : _TradingViewPalette.border,
+          width: active ? 1.5 : 1,
+        ),
+        boxShadow: active
+            ? const [
+                BoxShadow(
+                  color: Color(0x1a000000),
+                  offset: Offset(0, 8),
+                  blurRadius: 18,
+                ),
+              ]
+            : const [
+                BoxShadow(
+                  color: Color(0x0d000000),
+                  offset: Offset(0, 2),
+                  blurRadius: 8,
+                ),
+              ],
       ),
-      child: data.number == '01' ||
-              data.number == '03' ||
-              data.number == '05'
-          ? Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: compact
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 visual,
-                const SizedBox(width: 28),
-                Expanded(child: copy),
+                const SizedBox(height: 18),
+                copy,
               ],
             )
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: copy),
-                const SizedBox(width: 28),
-                visual,
-              ],
-            ),
+          : data.number == '01' ||
+                  data.number == '03' ||
+                  data.number == '05'
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    visual,
+                    const SizedBox(width: 28),
+                    Expanded(child: copy),
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: copy),
+                    const SizedBox(width: 28),
+                    visual,
+                  ],
+                ),
+    );
+
+    return AnimatedOpacity(
+      opacity: revealed ? 1 : .18,
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
+      child: AnimatedSlide(
+        offset: revealed ? Offset.zero : const Offset(0, .08),
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOutCubic,
+        child: card,
+      ),
     );
   }
 }
