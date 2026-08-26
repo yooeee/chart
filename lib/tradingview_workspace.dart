@@ -429,7 +429,14 @@ class _TradingViewMarketStrip extends StatelessWidget {
           children: [
             TextSpan(text: '$label  ', style: const TextStyle(color: _TradingViewPalette.body, fontSize: 10)),
             TextSpan(text: value, style: const TextStyle(color: _TradingViewPalette.ink, fontSize: 10, fontWeight: FontWeight.w700)),
-  
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
 class _TradingViewIntroductionPage extends StatefulWidget {
   const _TradingViewIntroductionPage({required this.onOpenChart});
 
@@ -1637,13 +1644,6 @@ class _TradingViewIntroStep extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-ht: 1.45)),
         ],
       ),
     );
