@@ -1395,7 +1395,7 @@ class _TradingViewIntroFeature extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 178),
+      height: 178,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
