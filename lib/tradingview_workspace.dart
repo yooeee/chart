@@ -848,7 +848,7 @@ class _TradingViewStudiesHero extends StatelessWidget {
                         ),
                         const SizedBox(height: 26),
                         SizedBox(
-                          height: 206,
+                          height: 240,
                           child: _TradingViewStudySignalTerminal(
                             compact: compact,
                             progress: pulseProgress,
