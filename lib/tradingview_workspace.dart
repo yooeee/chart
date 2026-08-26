@@ -526,100 +526,43 @@ class _TradingViewIntroductionPageState
     ),
   ];
 
-  late final AnimationController _entryController;
   late final AnimationController _motionController;
-  final GlobalKey _studyViewportKey = GlobalKey();
-  final List<GlobalKey> _studyKeys = List<GlobalKey>.generate(
-    _studies.length,
-    (_) => GlobalKey(),
-  );
-  final Set<int> _revealedStudies = <int>{0};
-  int _activeStudyIndex = 0;
-  bool _measureScheduled = false;
+  late final AnimationController _pageTransitionController;
+  late final PageController _pageController;
+  int _activePage = 0;
 
   @override
   void initState() {
     super.initState();
-    _entryController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1150),
-    )..forward();
     _motionController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2600),
     )..repeat();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _scheduleStudyMeasure(),
-    );
+    _pageTransitionController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 620),
+    )..forward();
+    _pageController = PageController();
   }
 
-  bool _handleStudyScroll(ScrollNotification notification) {
-    if (notification.metrics.axis == Axis.vertical) {
-      _scheduleStudyMeasure();
-    }
-    return false;
+  void _handlePageChanged(int page) {
+    if (!mounted) return;
+    setState(() => _activePage = page);
+    _pageTransitionController.forward(from: 0);
   }
 
-  void _scheduleStudyMeasure() {
-    if (_measureScheduled) return;
-    _measureScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _measureScheduled = false;
-      if (mounted) _measureStudies();
-    });
-  }
-
-  void _measureStudies() {
-    final viewportObject =
-        _studyViewportKey.currentContext?.findRenderObject();
-    if (viewportObject is! RenderBox || !viewportObject.hasSize) return;
-
-    final viewportOrigin = viewportObject.localToGlobal(Offset.zero);
-    final viewportTop = viewportOrigin.dy;
-    final viewportBottom = viewportTop + viewportObject.size.height;
-    final focusY = viewportTop + viewportObject.size.height * .48;
-    final nextRevealed = <int>{..._revealedStudies};
-    var nextActive = _activeStudyIndex;
-    var nearestDistance = double.infinity;
-    var visibleStudyFound = false;
-
-    for (var index = 0; index < _studyKeys.length; index++) {
-      final cardObject = _studyKeys[index].currentContext?.findRenderObject();
-      if (cardObject is! RenderBox || !cardObject.hasSize) continue;
-
-      final cardOrigin = cardObject.localToGlobal(Offset.zero);
-      final cardTop = cardOrigin.dy;
-      final cardBottom = cardTop + cardObject.size.height;
-      final isVisible = cardBottom > viewportTop + 28 &&
-          cardTop < viewportBottom - 28;
-      if (!isVisible) continue;
-
-      visibleStudyFound = true;
-      nextRevealed.add(index);
-      final cardCenter = (cardTop + cardBottom) / 2;
-      final distance = (cardCenter - focusY).abs();
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nextActive = index;
-      }
+  double _pageValue() {
+    if (!_pageController.hasClients) {
+      return _activePage.toDouble();
     }
-
-    if (!visibleStudyFound) return;
-    final revealChanged = nextRevealed.length != _revealedStudies.length;
-    if (revealChanged || nextActive != _activeStudyIndex) {
-      setState(() {
-        _revealedStudies
-          ..clear()
-          ..addAll(nextRevealed);
-        _activeStudyIndex = nextActive;
-      });
-    }
+    return _pageController.page ?? _activePage.toDouble();
   }
 
   @override
   void dispose() {
-    _entryController.dispose();
     _motionController.dispose();
+    _pageTransitionController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -628,221 +571,796 @@ class _TradingViewIntroductionPageState
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 820;
-        final horizontal = compact ? 16.0 : 36.0;
-        final contentWidth = constraints.maxWidth > horizontal * 2
-            ? constraints.maxWidth - horizontal * 2
-            : 0.0;
-        final metricColumns = constraints.maxWidth < 560
-            ? 1
-            : constraints.maxWidth < 980
-                ? 2
-                : 4;
-        final metricWidth =
-            (contentWidth - (metricColumns - 1) * 12) / metricColumns;
-        final lensColumns = constraints.maxWidth < 620 ? 1 : 3;
-        final lensWidth =
-            (contentWidth - (lensColumns - 1) * 12) / lensColumns;
-
         return SizedBox.expand(
-          key: _studyViewportKey,
-          child: NotificationListener<ScrollNotification>(
-            onNotification: _handleStudyScroll,
-            child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            horizontal,
-            compact ? 18 : 30,
-            horizontal,
-            46,
-          ),
-          child: AnimatedBuilder(
-            animation: _motionController,
-            builder: (context, child) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _TradingViewIntroReveal(
-                    animation: _entryController,
-                    delay: 0,
-                    child: _TradingViewStudiesHero(
-                      compact: compact,
-                      entryProgress: Curves.easeOutCubic
-                          .transform(_entryController.value),
-                      pulseProgress: _motionController.value,
-                      onOpenChart: widget.onOpenChart,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _TradingViewIntroReveal(
-                        animation: _entryController,
-                        delay: .10,
-                        child: SizedBox(
-                          width: metricWidth,
-                          child: const _TradingViewIntroMetric(
-                            value: '06',
-                            label: 'CUSTOM STUDIES',
-                            detail: '차트 신호 레이어',
-                          ),
+          child: ScrollConfiguration(
+            behavior: const MaterialScrollBehavior().copyWith(
+              scrollbars: false,
+            ),
+            child: PageView.builder(
+              controller: _pageController,
+              scrollDirection: Axis.vertical,
+              physics: const PageScrollPhysics(),
+              pageSnapping: true,
+              itemCount: _studies.length + 1,
+              onPageChanged: _handlePageChanged,
+              itemBuilder: (context, index) {
+                return AnimatedBuilder(
+                  animation: Listenable.merge(<Listenable>[
+                    _pageController,
+                    _pageTransitionController,
+                    _motionController,
+                  ]),
+                  builder: (context, child) {
+                    final page = _pageValue();
+                    final distance =
+                        (page - index).abs().clamp(0.0, 1.0).toDouble();
+                    final focus = 1.0 - distance;
+                    final transition = Curves.easeOutCubic.transform(
+                      _pageTransitionController.value,
+                    );
+                    final activeEntry =
+                        index == _activePage ? transition : 1.0;
+                    final direction = index < page ? -1.0 : 1.0;
+                    final offsetY = index == _activePage
+                        ? (1.0 - activeEntry) * 30
+                        : direction * distance * 18;
+                    final opacity = ((.46 + focus * .54) *
+                            (.70 + activeEntry * .30))
+                        .clamp(0.0, 1.0)
+                        .toDouble();
+                    final scale = .965 + focus * .035;
+
+                    final pageContent = index == 0
+                        ? _TradingViewScrollIntroHero(
+                            compact: compact,
+                            focus: focus,
+                            progress: _motionController.value,
+                            onOpenChart: widget.onOpenChart,
+                          )
+                        : _TradingViewScrollStudySlide(
+                            data: _studies[index - 1],
+                            studyIndex: index - 1,
+                            compact: compact,
+                            focus: focus,
+                            progress: _motionController.value,
+                          );
+
+                    return Opacity(
+                      opacity: opacity,
+                      child: Transform.translate(
+                        offset: Offset(0, offsetY),
+                        child: Transform.scale(
+                          scale: scale,
+                          child: pageContent,
                         ),
                       ),
-                      _TradingViewIntroReveal(
-                        animation: _entryController,
-                        delay: .15,
-                        child: SizedBox(
-                          width: metricWidth,
-                          child: const _TradingViewIntroMetric(
-                            value: '02',
-                            label: 'OVERLAY LAYERS',
-                            detail: '가격 위에 겹쳐 읽기',
-                          ),
-                        ),
-                      ),
-                      _TradingViewIntroReveal(
-                        animation: _entryController,
-                        delay: .20,
-                        child: SizedBox(
-                          width: metricWidth,
-                          child: const _TradingViewIntroMetric(
-                            value: '04',
-                            label: 'SIGNAL PANELS',
-                            detail: '모멘텀·거래량·흐름',
-                          ),
-                        ),
-                      ),
-                      _TradingViewIntroReveal(
-                        animation: _entryController,
-                        delay: .25,
-                        child: SizedBox(
-                          width: metricWidth,
-                          child: const _TradingViewIntroMetric(
-                            value: 'ONE',
-                            label: 'READING SYSTEM',
-                            detail: '한 화면에서 이어보기',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 48),
-                  _TradingViewIntroReveal(
-                    animation: _entryController,
-                    delay: .18,
-                    child: const _TradingViewIntroSectionHeading(
-                      kicker: 'STUDY LIBRARY',
-                      title: '여섯 개의 신호를 한 흐름으로.',
-                      detail: '06 STUDIES / VISUAL GUIDE',
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      SizedBox(
-                        width: lensWidth,
-                        child: const _TradingViewStudyLensCard(
-                          label: '01 / DIRECTION',
-                          title: '추세',
-                          body: '가격이 어느 방향으로 움직이는지 먼저 확인합니다.',
-                          icon: Icons.north_east_rounded,
-                        ),
-                      ),
-                      SizedBox(
-                        width: lensWidth,
-                        child: const _TradingViewStudyLensCard(
-                          label: '02 / ENERGY',
-                          title: '모멘텀',
-                          body: '방향에 힘이 붙는지, 약해지는지 살펴봅니다.',
-                          icon: Icons.bolt_rounded,
-                        ),
-                      ),
-                      SizedBox(
-                        width: lensWidth,
-                        child: const _TradingViewStudyLensCard(
-                          label: '03 / PARTICIPATION',
-                          title: '변동성·흐름',
-                          body: '움직임의 폭과 거래량이 함께 말하는 내용을 읽습니다.',
-                          icon: Icons.radar_rounded,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  _TradingViewIntroReveal(
-                    animation: _entryController,
-                    delay: .26,
-                    child: _TradingViewStudyProgress(
-                      compact: compact,
-                      activeIndex: _activeStudyIndex,
-                    ),
-                  ),
-                  const SizedBox(height: 42),
-                  for (var index = 0; index < _studies.length; index++)
-                    Padding(
-                      key: _studyKeys[index],
-                      padding: EdgeInsets.only(
-                        bottom: index == _studies.length - 1 ? 0 : 14,
-                      ),
-                      child: _TradingViewIntroReveal(
-                        animation: _entryController,
-                        delay: .30 + index * .055,
-                        child: _TradingViewStudyCard(
-                          data: _studies[index],
-                          compact: compact,
-                          pulseProgress: _motionController.value,
-                          revealed: _revealedStudies.contains(index),
-                          active: _activeStudyIndex == index,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 46),
-                  _TradingViewIntroReveal(
-                    animation: _entryController,
-                    delay: .55,
-                    child: const _TradingViewIntroSectionHeading(
-                      kicker: 'READING FLOW',
-                      title: '하나씩 보고, 마지막에 겹쳐 읽습니다.',
-                      detail: 'A SIMPLE STUDY ROUTINE',
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _TradingViewIntroReveal(
-                    animation: _entryController,
-                    delay: .62,
-                    child: _TradingViewStudyReadingFlow(
-                      compact: compact,
-                      onOpenChart: widget.onOpenChart,
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-                  _TradingViewIntroReveal(
-                    animation: _entryController,
-                    delay: .70,
-                    child: _TradingViewStudyCta(
-                      compact: compact,
-                      onOpenChart: widget.onOpenChart,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    '소개용 미니 차트는 지표의 구조와 읽는 순서를 설명하기 위한 개념 그래픽입니다. 실제 시세 차트는 차트 메뉴의 TradingView 위젯에서 제공합니다.',
-                    style: TextStyle(
-                      color: _TradingViewPalette.muted,
-                      fontSize: 10,
-                      height: 1.45,
-                    ),
-                  ),
-                ],
-              );
-            },
-              ),
+                    );
+                  },
+                );
+              },
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _TradingViewScrollIntroHero extends StatelessWidget {
+  const _TradingViewScrollIntroHero({
+    required this.compact,
+    required this.focus,
+    required this.progress,
+    required this.onOpenChart,
+  });
+
+  final bool compact;
+  final double focus;
+  final double progress;
+  final VoidCallback onOpenChart;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final short = constraints.maxHeight < 620;
+        final padding = compact
+            ? (short ? 16.0 : 24.0)
+            : (short ? 30.0 : 48.0);
+        final terminalHeight = compact
+            ? (short ? 126.0 : 220.0)
+            : (short ? 190.0 : 292.0);
+        final terminalWidth = math.min(392.0, constraints.maxWidth * .36);
+
+        return Container(
+          color: _TradingViewPalette.ink,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _TradingViewStudyHeroPainter(
+                    progress: progress,
+                    intensity: .72 + focus * .28,
+                  ),
+                ),
+              ),
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xf517191d),
+                        Color(0xc817191d),
+                        Color(0x2a17191d),
+                      ],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(padding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const _TradingViewStudiesEyebrow(),
+                    SizedBox(height: compact ? 16 : 26),
+                    Expanded(
+                      child: compact
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: _TradingViewScrollHeroCopy(
+                                      compact: true,
+                                      short: short,
+                                      onOpenChart: onOpenChart,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: short ? 9 : 16),
+                                SizedBox(
+                                  height: terminalHeight,
+                                  child: _TradingViewScrollSignalTerminal(
+                                    progress: progress,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  flex: 6,
+                                  child: _TradingViewScrollHeroCopy(
+                                    compact: false,
+                                    short: short,
+                                    onOpenChart: onOpenChart,
+                                  ),
+                                ),
+                                const SizedBox(width: 32),
+                                SizedBox(
+                                  width: terminalWidth,
+                                  height: terminalHeight,
+                                  child: _TradingViewScrollSignalTerminal(
+                                    progress: progress,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                    SizedBox(height: compact ? 12 : 20),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.mouse_rounded,
+                          color: Color(0xffaab3b5),
+                          size: 15,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          short
+                              ? 'VERTICAL SCROLL / EXPLORE'
+                              : 'VERTICAL SCROLL / ONE STUDY AT A TIME',
+                          style: const TextStyle(
+                            color: Color(0xffaab3b5),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: .9,
+                          ),
+                        ),
+                        const Spacer(),
+                        const Text(
+                          '01 / 07',
+                          style: TextStyle(
+                            color: _TradingViewPalette.green,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TradingViewScrollHeroCopy extends StatelessWidget {
+  const _TradingViewScrollHeroCopy({
+    required this.compact,
+    required this.short,
+    required this.onOpenChart,
+  });
+
+  final bool compact;
+  final bool short;
+  final VoidCallback onOpenChart;
+
+  @override
+  Widget build(BuildContext context) {
+    final titleSize = compact
+        ? (short ? 26.0 : 34.0)
+        : (short ? 35.0 : 48.0);
+    final bodySize = short ? 10.0 : compact ? 12.0 : 13.0;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '여섯 개의 신호를\n한 장면씩 읽다.',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: titleSize,
+            height: 1.03,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -1.4,
+          ),
+        ),
+        SizedBox(height: short ? 8 : 14),
+        Text(
+          compact
+              ? '추세·모멘텀·변동성·거래량을 한 개씩 확인합니다.'
+              : '추세·모멘텀·변동성·거래량을 한 개씩 확인하고,\n스크롤이 끝날 때 하나의 읽기 흐름으로 연결합니다.',
+          style: TextStyle(
+            color: const Color(0xffb7bec1),
+            fontSize: bodySize,
+            height: 1.5,
+          ),
+        ),
+        SizedBox(height: short ? 12 : 22),
+        ElevatedButton.icon(
+          onPressed: onOpenChart,
+          icon: const Icon(Icons.arrow_outward_rounded, size: 16),
+          label: const Text('차트에서 사용하기'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _TradingViewPalette.green,
+            foregroundColor: Colors.black,
+            elevation: 0,
+            padding: EdgeInsets.symmetric(
+              horizontal: short ? 14 : 20,
+              vertical: short ? 10 : 16,
+            ),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.zero,
+            ),
+            textStyle: TextStyle(
+              fontSize: short ? 10 : 13,
+              fontWeight: FontWeight.w800,
+              letterSpacing: .2,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TradingViewScrollSignalTerminal extends StatelessWidget {
+  const _TradingViewScrollSignalTerminal({required this.progress});
+
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: const Color(0xb5080d0e),
+        border: Border.all(color: const Color(0x60767d7f)),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          CustomPaint(
+            painter: _TradingViewStudyHeroPainter(
+              progress: progress,
+              intensity: 1,
+              mini: true,
+            ),
+          ),
+          const Positioned(
+            left: 10,
+            top: 9,
+            child: Text(
+              'SCROLL SIGNAL MAP',
+              style: TextStyle(
+                color: Color(0xffe9edef),
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+                letterSpacing: .9,
+              ),
+            ),
+          ),
+          const Positioned(
+            right: 10,
+            top: 9,
+            child: Text(
+              '07 SCENES',
+              style: TextStyle(
+                color: _TradingViewPalette.green,
+                fontSize: 8,
+                fontWeight: FontWeight.w800,
+                letterSpacing: .7,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 10,
+            right: 10,
+            bottom: 9,
+            child: Wrap(
+              spacing: 5,
+              runSpacing: 4,
+              children: [
+                _TradingViewScrollSignalTag(
+                  label: 'TREND',
+                  color: _TradingViewPalette.green,
+                ),
+                _TradingViewScrollSignalTag(
+                  label: 'MOMENTUM',
+                  color: const Color(0xff9d8cff),
+                ),
+                _TradingViewScrollSignalTag(
+                  label: 'VOLATILITY',
+                  color: const Color(0xff62b5ff),
+                ),
+                _TradingViewScrollSignalTag(
+                  label: 'FLOW',
+                  color: const Color(0xffff8f70),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TradingViewScrollSignalTag extends StatelessWidget {
+  const _TradingViewScrollSignalTag({
+    required this.label,
+    required this.color,
+  });
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      color: const Color(0x1affffff),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 8,
+          fontWeight: FontWeight.w800,
+          letterSpacing: .5,
+        ),
+      ),
+    );
+  }
+}
+
+class _TradingViewScrollStudySlide extends StatelessWidget {
+  const _TradingViewScrollStudySlide({
+    required this.data,
+    required this.studyIndex,
+    required this.compact,
+    required this.focus,
+    required this.progress,
+  });
+
+  final _TradingViewStudyPreviewData data;
+  final int studyIndex;
+  final bool compact;
+  final double focus;
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final short = constraints.maxHeight < 620;
+        final padding = compact
+            ? (short ? 14.0 : 20.0)
+            : (short ? 28.0 : 46.0);
+        final background = studyIndex.isEven
+            ? Colors.white
+            : const Color(0xfff1f4f5);
+
+        final visual = Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Color.fromRGBO(0, 0, 0, .06 + focus * .05),
+                offset: const Offset(0, 8),
+                blurRadius: 22,
+              ),
+            ],
+          ),
+          child: ClipRect(
+            child: _TradingViewStudyVisual(
+              data: data,
+              progress: progress,
+            ),
+          ),
+        );
+        final copy = _TradingViewScrollStudyCopy(
+          data: data,
+          compact: compact,
+          short: short,
+        );
+
+        return Container(
+          color: background,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Positioned(
+                top: -120,
+                right: -90,
+                child: Container(
+                  width: 280,
+                  height: 280,
+                  decoration: BoxDecoration(
+                    color: data.accent.withValues(alpha: .045),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -160,
+                left: -130,
+                child: Container(
+                  width: 320,
+                  height: 320,
+                  decoration: BoxDecoration(
+                    color: _TradingViewPalette.green.withValues(alpha: .025),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  padding,
+                  padding,
+                  padding,
+                  compact ? (short ? 12 : 18) : (short ? 18 : 28),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _TradingViewScrollStudyHeader(
+                      data: data,
+                      studyIndex: studyIndex,
+                      compact: compact,
+                    ),
+                    SizedBox(height: compact ? 12 : 20),
+                    Expanded(
+                      child: compact
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  flex: short ? 4 : 5,
+                                  child: visual,
+                                ),
+                                SizedBox(height: short ? 10 : 16),
+                                Expanded(
+                                  flex: short ? 7 : 6,
+                                  child: copy,
+                                ),
+                              ],
+                            )
+                          : Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(flex: 6, child: visual),
+                                const SizedBox(width: 46),
+                                Expanded(flex: 5, child: copy),
+                              ],
+                            ),
+                    ),
+                    SizedBox(height: compact ? 10 : 18),
+                    Row(
+                      children: [
+                        Text(
+                          studyIndex == _TradingViewIntroductionPageState._studies.length - 1
+                              ? 'LAST STUDY / CHART NEXT'
+                              : 'SCROLL / NEXT STUDY',
+                          style: const TextStyle(
+                            color: _TradingViewPalette.muted,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: .8,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          studyIndex == _TradingViewIntroductionPageState._studies.length - 1
+                              ? '06 / 06'
+                              : '0${studyIndex + 1} / 06',
+                          style: const TextStyle(
+                            color: _TradingViewPalette.label,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: .9,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TradingViewScrollStudyHeader extends StatelessWidget {
+  const _TradingViewScrollStudyHeader({
+    required this.data,
+    required this.studyIndex,
+    required this.compact,
+  });
+
+  final _TradingViewStudyPreviewData data;
+  final int studyIndex;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final segments = Row(
+      children: [
+        for (var index = 0; index < 6; index++)
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: index == 5 ? 0 : 5),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeOutCubic,
+                height: 4,
+                color: index == studyIndex
+                    ? _TradingViewPalette.green
+                    : index < studyIndex
+                        ? const Color(0x5500de5a)
+                        : const Color(0xffdfe5e6),
+              ),
+            ),
+          ),
+      ],
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              color: data.accent,
+            ),
+            const SizedBox(width: 9),
+            Text(
+              'STUDY ${data.number}',
+              style: const TextStyle(
+                color: _TradingViewPalette.ink,
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                data.category,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _TradingViewPalette.muted,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: .75,
+                ),
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '${data.number} / 06',
+              style: const TextStyle(
+                color: _TradingViewPalette.label,
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+                letterSpacing: .8,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: compact ? 9 : 13),
+        segments,
+      ],
+    );
+  }
+}
+
+class _TradingViewScrollStudyCopy extends StatelessWidget {
+  const _TradingViewScrollStudyCopy({
+    required this.data,
+    required this.compact,
+    required this.short,
+  });
+
+  final _TradingViewStudyPreviewData data;
+  final bool compact;
+  final bool short;
+
+  @override
+  Widget build(BuildContext context) {
+    final titleSize = compact
+        ? (short ? 23.0 : 28.0)
+        : (short ? 29.0 : 36.0);
+    final bodySize = compact
+        ? (short ? 10.0 : 12.0)
+        : (short ? 11.0 : 13.0);
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ONE STUDY / ONE QUESTION',
+          style: TextStyle(
+            color: data.accent,
+            fontSize: short ? 8 : 9,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1,
+          ),
+        ),
+        SizedBox(height: short ? 8 : 14),
+        Text(
+          data.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: _TradingViewPalette.ink,
+            fontSize: titleSize,
+            height: 1.05,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -.8,
+          ),
+        ),
+        SizedBox(height: short ? 8 : 12),
+        Text(
+          data.summary,
+          maxLines: compact ? (short ? 2 : 3) : 4,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: _TradingViewPalette.body,
+            fontSize: bodySize,
+            height: 1.5,
+          ),
+        ),
+        SizedBox(height: short ? 10 : 16),
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: short ? 8 : 10,
+            vertical: short ? 6 : 8,
+          ),
+          color: const Color(0xffe8edef),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.tune_rounded,
+                color: _TradingViewPalette.label,
+                size: short ? 12 : 14,
+              ),
+              const SizedBox(width: 7),
+              Flexible(
+                child: Text(
+                  data.formula,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: _TradingViewPalette.label,
+                    fontSize: short ? 8 : 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: .35,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: short ? 11 : 18),
+        Text(
+          'READING POINT',
+          style: TextStyle(
+            color: _TradingViewPalette.green,
+            fontSize: short ? 8 : 9,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          data.reading,
+          maxLines: compact ? (short ? 3 : 4) : 5,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: _TradingViewPalette.body,
+            fontSize: short ? 10 : compact ? 11 : 12,
+            height: 1.5,
+          ),
+        ),
+        SizedBox(height: short ? 10 : 16),
+        Row(
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              color: data.accent,
+            ),
+            const SizedBox(width: 7),
+            Text(
+              data.shortCode,
+              style: TextStyle(
+                color: data.accent,
+                fontSize: short ? 8 : 9,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'CONCEPT PREVIEW',
+              style: TextStyle(
+                color: _TradingViewPalette.muted,
+                fontSize: 8,
+                fontWeight: FontWeight.w700,
+                letterSpacing: .5,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
