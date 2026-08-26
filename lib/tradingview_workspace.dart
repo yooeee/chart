@@ -392,38 +392,6 @@ class _TradingViewMarketSelector extends StatelessWidget {
   }
 }
 
-class _TradingViewIntervalSelector extends StatelessWidget {
-  const _TradingViewIntervalSelector({required this.selectedInterval, required this.onChanged});
-
-  final String selectedInterval;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    const intervals = <MapEntry<String, String>>[
-      MapEntry('15분', '15'),
-      MapEntry('1시간', '60'),
-      MapEntry('일봉', 'D'),
-      MapEntry('주봉', 'W'),
-    ];
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: intervals
-          .map(
-            (interval) => InkWell(
-              onTap: () => onChanged(interval.value),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
-                color: interval.value == selectedInterval ? _TradingViewPalette.green : Colors.transparent,
-                child: Text(interval.key, style: TextStyle(color: interval.value == selectedInterval ? Colors.black : _TradingViewPalette.muted, fontSize: 10, fontWeight: FontWeight.w700)),
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-}
-
 class _TradingViewMarketStrip extends StatelessWidget {
   const _TradingViewMarketStrip({required this.market});
 
