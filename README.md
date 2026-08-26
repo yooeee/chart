@@ -1,51 +1,56 @@
 # Pulse Chart
 
-Flutter 기반의 반응형 주식 차트 워크스페이스입니다. Web, iOS, Android에서 같은 차트 UI를 사용하도록 외부 차트 렌더링 라이브러리 없이 `CustomPainter`로 캔들 차트와 지표 패널을 그립니다.
+Flutter 기반의 반응형 시장 차트 워크스페이스입니다. Web에서는 TradingView
+Advanced Chart 위젯을 직접 임베드해 삼성전자, 비트코인, NAVER, NVDA, NEXON의
+실제 TradingView 차트를 표시합니다.
 
-## 현재 포함된 기능
+## Web 차트
 
-- Twelve Data의 실제 OHLCV 데이터 연동
-- 마우스 크로스헤어와 터치 핀치 줌
-- 추세 리본, RSI Pulse, MACD Momentum, Bollinger Squeeze, Volume Pressure, Smart Flow
-- 지표별 개별 토글 및 지표 설명 패널
-- 데스크톱 2열 / 모바일 단일 열 반응형 레이아웃
-- Nexon의 화이트·근검정·일렉트릭 그린에서 영감을 받은 sharp UI
+- TradingView Advanced Chart 위젯 사용
+- API 키 없이 브라우저에서 TradingView 시장 데이터 로드
+- 삼성전자(`KRX:005930`)와 비트코인(`BINANCE:BTCUSDT`) 선택
+- 15분, 1시간, 일봉, 주봉 인터벌 선택
+- Web 화면에는 커스텀 보조지표를 표시하지 않음
+- 데스크톱·태블릿·모바일 폭에 맞춰 반응형으로 동작
 
 ## 실행
 
 ```bash
 flutter create --platforms=web,ios,android .
 flutter pub get
-flutter run -d chrome --dart-define=TWELVE_DATA_API_KEY=YOUR_KEY
-flutter run -d ios --dart-define=TWELVE_DATA_API_KEY=YOUR_KEY
-flutter run -d android --dart-define=TWELVE_DATA_API_KEY=YOUR_KEY
+flutter run -d chrome
 ```
 
-APK를 직접 만들 때도 같은 값을 전달합니다.
+Web 차트는 TradingView 위젯이 브라우저에서 데이터를 요청하므로
+`TWELVE_DATA_API_KEY`가 필요하지 않습니다.
+
+## GitHub Pages
+
+`.github/workflows/deploy-web.yml`이 `main` push 시 Flutter Web을 빌드하고
+GitHub Pages에 배포합니다.
+
+1. 저장소 `Settings > Pages > Build and deployment > Source`를 `GitHub Actions`로 설정
+2. `Actions > Deploy Flutter Web to GitHub Pages`를 실행하거나 `main`에 push
+3. 배포 완료 후 `https://yooeee.github.io/chart/`에서 확인
+
+TradingView 차트의 실시간성·지연 여부는 거래소와 TradingView의 데이터 정책에
+따릅니다. 차트 내부의 거래소·심볼 변경 기능도 TradingView 위젯에서 제공합니다.
+
+## 네이티브 앱
+
+iOS·Android에는 기존 Flutter 네이티브 차트 경로가 남아 있습니다. 해당 경로는
+Twelve Data API 키를 실행 시 전달해야 합니다.
 
 ```bash
+flutter run -d android --dart-define=TWELVE_DATA_API_KEY=YOUR_KEY
 flutter build apk --release --dart-define=TWELVE_DATA_API_KEY=YOUR_KEY
 ```
 
-API 키가 없으면 앱은 데모 데이터로 전환하지 않고 `TWELVE_DATA_API_KEY` 설정 오류를 표시합니다. API 키를 `lib/` 파일이나 GitHub 커밋에 저장하지 마세요. `--dart-define`로 클라이언트에 넣은 키는 Web 번들과 APK에서 노출될 수 있으므로 내부 테스트용으로만 사용하고, 배포 서비스에서는 서버 프록시의 환경변수로 보호해야 합니다.
+API 키는 저장소에 커밋하지 않습니다. GitHub Actions APK 빌드는 키 없이도 수행되지만,
+키가 없는 네이티브 실행 화면에서는 Twelve Data 설정 안내가 표시됩니다.
 
-## GitHub Pages Web 미리보기
+## 참고
 
-`.github/workflows/deploy-web.yml`이 `main` push마다 Flutter Web을 빌드해 GitHub Pages에 배포합니다.
-
-처음 한 번 GitHub 저장소에서 다음을 설정합니다.
-
-1. `Settings > Pages`로 이동
-2. `Build and deployment > Source`를 `GitHub Actions`로 선택
-3. Actions의 `Deploy Flutter Web to GitHub Pages` 실행이 성공할 때까지 대기
-4. `https://yooeee.github.io/chart/` 접속
-
-현재 Pages workflow에는 API 키를 넣지 않았기 때문에 페이지 UI는 열리지만 실데이터는 표시되지 않습니다. 공개 Web에서 실데이터를 사용하려면 Twelve Data 키를 서버 프록시에 보관하고 Flutter Web은 그 서버를 호출해야 합니다.
-
-`main`에 push하면 GitHub Actions가 Android release APK도 빌드합니다. 빌드가 성공하면 Actions 실행 화면의 `pulse-chart-release-apk` 아티팩트에서 APK를 받을 수 있습니다. 수동 실행은 `Actions > Flutter checks > Run workflow`에서 할 수 있습니다.
-
-현재 화면은 `TwelveDataMarketDataSource`에서 받은 OHLCV를 사용합니다. 데이터 공급자의 거래소별 제공 범위와 지연 여부는 계정 플랜에 따라 달라집니다. `DemoMarketDataSource`는 네트워크 없이 지표 테스트를 실행하기 위한 fixture로만 남아 있습니다.
-
-Twelve Data 공식 문서: https://twelvedata.com/docs
-
-> 투자 판단을 위한 신호가 아니라 UI·계산 구조를 검증하기 위한 앱입니다.
+- TradingView Advanced Chart widget: https://www.tradingview.com/widget-docs/widgets/charts/advanced-chart/
+- TradingView 위젯은 TradingView의 제공 조건과 거래소 데이터 지연 정책을 따릅니다.
+- 투자 판단을 위한 신호가 아니라 UI와 차트 연동을 검증하기 위한 앱입니다.
