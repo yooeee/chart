@@ -93,7 +93,7 @@ class _TradingViewWorkspacePageState extends State<TradingViewWorkspacePage> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '$indicatorName는 현재 준비 중입니다.',
+                  '$indicatorName 지표는 현재 준비 중입니다.',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
