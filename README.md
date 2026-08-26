@@ -29,7 +29,20 @@ flutter build apk --release --dart-define=TWELVE_DATA_API_KEY=YOUR_KEY
 
 API 키가 없으면 앱은 데모 데이터로 전환하지 않고 `TWELVE_DATA_API_KEY` 설정 오류를 표시합니다. API 키를 `lib/` 파일이나 GitHub 커밋에 저장하지 마세요. `--dart-define`로 클라이언트에 넣은 키는 Web 번들과 APK에서 노출될 수 있으므로 내부 테스트용으로만 사용하고, 배포 서비스에서는 서버 프록시의 환경변수로 보호해야 합니다.
 
-`main`에 push하면 GitHub Actions가 Android release APK를 빌드합니다. 빌드가 성공하면 Actions 실행 화면의 `pulse-chart-release-apk` 아티팩트에서 APK를 받을 수 있습니다. 수동 실행은 `Actions > Flutter checks > Run workflow`에서 할 수 있습니다.
+## GitHub Pages Web 미리보기
+
+`.github/workflows/deploy-web.yml`이 `main` push마다 Flutter Web을 빌드해 GitHub Pages에 배포합니다.
+
+처음 한 번 GitHub 저장소에서 다음을 설정합니다.
+
+1. `Settings > Pages`로 이동
+2. `Build and deployment > Source`를 `GitHub Actions`로 선택
+3. Actions의 `Deploy Flutter Web to GitHub Pages` 실행이 성공할 때까지 대기
+4. `https://yooeee.github.io/chart/` 접속
+
+현재 Pages workflow에는 API 키를 넣지 않았기 때문에 페이지 UI는 열리지만 실데이터는 표시되지 않습니다. 공개 Web에서 실데이터를 사용하려면 Twelve Data 키를 서버 프록시에 보관하고 Flutter Web은 그 서버를 호출해야 합니다.
+
+`main`에 push하면 GitHub Actions가 Android release APK도 빌드합니다. 빌드가 성공하면 Actions 실행 화면의 `pulse-chart-release-apk` 아티팩트에서 APK를 받을 수 있습니다. 수동 실행은 `Actions > Flutter checks > Run workflow`에서 할 수 있습니다.
 
 현재 화면은 `TwelveDataMarketDataSource`에서 받은 OHLCV를 사용합니다. 데이터 공급자의 거래소별 제공 범위와 지연 여부는 계정 플랜에 따라 달라집니다. `DemoMarketDataSource`는 네트워크 없이 지표 테스트를 실행하기 위한 fixture로만 남아 있습니다.
 
