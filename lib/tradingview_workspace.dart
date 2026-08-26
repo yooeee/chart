@@ -437,6 +437,7 @@ class _TradingViewMarketStrip extends StatelessWidget {
 }
 
 
+
 class _TradingViewIntroductionPage extends StatefulWidget {
   const _TradingViewIntroductionPage({required this.onOpenChart});
 
@@ -450,26 +451,101 @@ class _TradingViewIntroductionPage extends StatefulWidget {
 class _TradingViewIntroductionPageState
     extends State<_TradingViewIntroductionPage>
     with TickerProviderStateMixin {
+  static const _studies = <_TradingViewStudyPreviewData>[
+    _TradingViewStudyPreviewData(
+      number: '01',
+      category: 'TREND / OVERLAY',
+      title: 'Adaptive Trend Ribbon',
+      shortCode: 'TREND',
+      formula: 'EMA 21 / EMA 55',
+      summary: 'EMA 21과 EMA 55의 방향과 간격으로 추세의 결을 읽습니다.',
+      reading:
+          '두 평균선의 기울기와 간격이 같은 방향으로 움직이는지 먼저 확인합니다.',
+      mode: 0,
+      accent: _TradingViewPalette.green,
+    ),
+    _TradingViewStudyPreviewData(
+      number: '02',
+      category: 'MOMENTUM / OSCILLATOR',
+      title: 'RSI Pulse',
+      shortCode: 'RSI',
+      formula: 'RSI 14 + SIGNAL 5',
+      summary: '14기간 RSI와 5기간 신호선의 속도 변화를 함께 표시합니다.',
+      reading:
+          '과열·침체 숫자 하나보다 신호선의 방향 전환과 속도 변화를 함께 봅니다.',
+      mode: 1,
+      accent: Color(0xff9d8cff),
+    ),
+    _TradingViewStudyPreviewData(
+      number: '03',
+      category: 'MOMENTUM / HISTOGRAM',
+      title: 'MACD Momentum',
+      shortCode: 'MACD',
+      formula: 'EMA 12 / 26 / 9',
+      summary: '추세 방향과 모멘텀 변화를 선과 히스토그램으로 표시합니다.',
+      reading:
+          '히스토그램의 색과 크기가 바뀌는 지점에서 모멘텀 전환을 관찰합니다.',
+      mode: 2,
+      accent: Color(0xff7eafff),
+    ),
+    _TradingViewStudyPreviewData(
+      number: '04',
+      category: 'VOLATILITY / OVERLAY',
+      title: 'Bollinger Squeeze',
+      shortCode: 'BOLL',
+      formula: 'SMA 20 / ±2σ',
+      summary: '밴드 폭의 수축과 확장으로 변동성 국면을 추적합니다.',
+      reading:
+          '밴드가 좁아지는 압축 구간과 다시 벌어지는 확장 구간을 구분해 봅니다.',
+      mode: 3,
+      accent: Color(0xff62b5ff),
+    ),
+    _TradingViewStudyPreviewData(
+      number: '05',
+      category: 'VOLUME / PRESSURE',
+      title: 'Volume Pressure',
+      shortCode: 'V-PRESS',
+      formula: '14 PERIOD PRESSURE',
+      summary: '가격 움직임에 실린 거래량의 매수·매도 압력을 계산합니다.',
+      reading:
+          '가격 방향이 거래량과 함께 나타나는지 확인해 움직임의 밀도를 읽습니다.',
+      mode: 4,
+      accent: Color(0xffffc857),
+    ),
+    _TradingViewStudyPreviewData(
+      number: '06',
+      category: 'FLOW / DEVIATION',
+      title: 'Smart Flow',
+      shortCode: 'FLOW',
+      formula: '20 PERIOD FLOW + Z',
+      summary: '거래량 방향성과 현재 거래량 이탈을 함께 읽습니다.',
+      reading:
+          '20기간 흐름과 현재 거래량 이탈이 같은 방향인지 비교해 봅니다.',
+      mode: 5,
+      accent: Color(0xffff8f70),
+    ),
+  ];
+
   late final AnimationController _entryController;
-  late final AnimationController _pulseController;
+  late final AnimationController _motionController;
 
   @override
   void initState() {
     super.initState();
     _entryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1150),
     )..forward();
-    _pulseController = AnimationController(
+    _motionController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2400),
+      duration: const Duration(milliseconds: 2600),
     )..repeat();
   }
 
   @override
   void dispose() {
     _entryController.dispose();
-    _pulseController.dispose();
+    _motionController.dispose();
     super.dispose();
   }
 
@@ -489,34 +565,31 @@ class _TradingViewIntroductionPageState
                 : 4;
         final metricWidth =
             (contentWidth - (metricColumns - 1) * 12) / metricColumns;
-        final assetColumns = constraints.maxWidth < 560
-            ? 1
-            : constraints.maxWidth < 1100
-                ? 2
-                : 4;
-        final assetWidth =
-            (contentWidth - (assetColumns - 1) * 12) / assetColumns;
+        final lensColumns = constraints.maxWidth < 620 ? 1 : 3;
+        final lensWidth =
+            (contentWidth - (lensColumns - 1) * 12) / lensColumns;
 
         return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(horizontal, compact ? 18 : 30, horizontal, 44),
+          padding: EdgeInsets.fromLTRB(
+            horizontal,
+            compact ? 18 : 30,
+            horizontal,
+            46,
+          ),
           child: AnimatedBuilder(
-            animation: Listenable.merge(<Listenable>[
-              _entryController,
-              _pulseController,
-            ]),
+            animation: _motionController,
             builder: (context, child) {
-              final entryProgress =
-                  Curves.easeOutCubic.transform(_entryController.value);
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _TradingViewIntroReveal(
                     animation: _entryController,
                     delay: 0,
-                    child: _TradingViewIntroHero(
+                    child: _TradingViewStudiesHero(
                       compact: compact,
-                      entryProgress: entryProgress,
-                      pulseProgress: _pulseController.value,
+                      entryProgress: Curves.easeOutCubic
+                          .transform(_entryController.value),
+                      pulseProgress: _motionController.value,
                       onOpenChart: widget.onOpenChart,
                     ),
                   ),
@@ -531,89 +604,58 @@ class _TradingViewIntroductionPageState
                         child: SizedBox(
                           width: metricWidth,
                           child: const _TradingViewIntroMetric(
-                            value: '04',
-                            label: 'TRACKED ASSETS',
-                            detail: '핵심 관심 종목',
+                            value: '06',
+                            label: 'CUSTOM STUDIES',
+                            detail: '차트 신호 레이어',
                           ),
                         ),
                       ),
                       _TradingViewIntroReveal(
                         animation: _entryController,
-                        delay: .16,
+                        delay: .15,
                         child: SizedBox(
                           width: metricWidth,
                           child: const _TradingViewIntroMetric(
                             value: '02',
-                            label: 'MARKET TYPES',
-                            detail: 'CRYPTO + EQUITY-LINKED',
+                            label: 'OVERLAY LAYERS',
+                            detail: '가격 위에 겹쳐 읽기',
                           ),
                         ),
                       ),
                       _TradingViewIntroReveal(
                         animation: _entryController,
-                        delay: .22,
+                        delay: .20,
                         child: SizedBox(
                           width: metricWidth,
                           child: const _TradingViewIntroMetric(
-                            value: 'LIVE',
-                            label: 'TRADINGVIEW FEED',
-                            detail: '인터랙티브 차트',
+                            value: '04',
+                            label: 'SIGNAL PANELS',
+                            detail: '모멘텀·거래량·흐름',
                           ),
                         ),
                       ),
                       _TradingViewIntroReveal(
                         animation: _entryController,
-                        delay: .28,
+                        delay: .25,
                         child: SizedBox(
                           width: metricWidth,
                           child: const _TradingViewIntroMetric(
-                            value: 'NEXT',
-                            label: 'CUSTOM STUDIES',
-                            detail: '보조지표 6종 확장',
+                            value: 'ONE',
+                            label: 'READING SYSTEM',
+                            detail: '한 화면에서 이어보기',
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 38),
+                  const SizedBox(height: 48),
                   _TradingViewIntroReveal(
                     animation: _entryController,
-                    delay: .20,
+                    delay: .18,
                     child: const _TradingViewIntroSectionHeading(
-                      kicker: 'MARKET UNIVERSE',
-                      title: '네 개의 시장, 하나의 시야.',
-                      detail: '04 ASSETS / ONE WORKSPACE',
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      ...TradingViewMarket.markets.asMap().entries.map(
-                            (entry) => _TradingViewIntroReveal(
-                              animation: _entryController,
-                              delay: .34 + entry.key * .06,
-                              child: SizedBox(
-                                width: assetWidth,
-                                child: _TradingViewIntroMarketCard(
-                                  index: entry.key + 1,
-                                  market: entry.value,
-                                  onTap: widget.onOpenChart,
-                                ),
-                              ),
-                            ),
-                          ),
-                    ],
-                  ),
-                  const SizedBox(height: 38),
-                  _TradingViewIntroReveal(
-                    animation: _entryController,
-                    delay: .42,
-                    child: const _TradingViewIntroSectionHeading(
-                      kicker: 'WHY PULSE',
-                      title: '결정에 필요한 정보만 남깁니다.',
-                      detail: 'BUILT FOR CLARITY',
+                      kicker: 'STUDY LIBRARY',
+                      title: '여섯 개의 신호를 한 흐름으로.',
+                      detail: '06 STUDIES / VISUAL GUIDE',
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -622,63 +664,85 @@ class _TradingViewIntroductionPageState
                     runSpacing: 12,
                     children: [
                       SizedBox(
-                        width: assetWidth,
-                        child: const _TradingViewIntroFeature(
-                          icon: Icons.query_stats_rounded,
-                          number: '01',
-                          title: 'LIVE CHART ENGINE',
-                          body:
-                              'TradingView Advanced Chart의 확대, 이동, 시간봉 전환을 한 화면에서 사용합니다.',
+                        width: lensWidth,
+                        child: const _TradingViewStudyLensCard(
+                          label: '01 / DIRECTION',
+                          title: '추세',
+                          body: '가격이 어느 방향으로 움직이는지 먼저 확인합니다.',
+                          icon: Icons.north_east_rounded,
                         ),
                       ),
                       SizedBox(
-                        width: assetWidth,
-                        child: const _TradingViewIntroFeature(
-                          icon: Icons.grid_view_rounded,
-                          number: '02',
-                          title: 'CURATED UNIVERSE',
-                          body:
-                              'Bitcoin과 Ethereum, 삼성전자·SK하이닉스 추종 선물을 핵심 워치리스트로 구성했습니다.',
+                        width: lensWidth,
+                        child: const _TradingViewStudyLensCard(
+                          label: '02 / ENERGY',
+                          title: '모멘텀',
+                          body: '방향에 힘이 붙는지, 약해지는지 살펴봅니다.',
+                          icon: Icons.bolt_rounded,
                         ),
                       ),
                       SizedBox(
-                        width: assetWidth,
-                        child: const _TradingViewIntroFeature(
-                          icon: Icons.devices_rounded,
-                          number: '03',
-                          title: 'RESPONSIVE SHELL',
-                          body:
-                              '데스크톱, 태블릿, 모바일에서 메뉴와 차트 영역이 자연스럽게 재배치됩니다.',
-                        ),
-                      ),
-                      SizedBox(
-                        width: assetWidth,
-                        child: const _TradingViewIntroFeature(
-                          icon: Icons.auto_graph_rounded,
-                          number: '04',
-                          title: 'STUDY-READY',
-                          body:
-                              '다음 확장 단계에서 자체 제작 보조지표 6종을 차트 워크스페이스에 연결할 수 있습니다.',
+                        width: lensWidth,
+                        child: const _TradingViewStudyLensCard(
+                          label: '03 / PARTICIPATION',
+                          title: '변동성·흐름',
+                          body: '움직임의 폭과 거래량이 함께 말하는 내용을 읽습니다.',
+                          icon: Icons.radar_rounded,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 38),
+                  const SizedBox(height: 42),
+                  for (var index = 0; index < _studies.length; index++)
+                    Padding(
+                      padding: EdgeInsets.only(
+                        bottom: index == _studies.length - 1 ? 0 : 14,
+                      ),
+                      child: _TradingViewIntroReveal(
+                        animation: _entryController,
+                        delay: .30 + index * .055,
+                        child: _TradingViewStudyCard(
+                          data: _studies[index],
+                          compact: compact,
+                          pulseProgress: _motionController.value,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 46),
                   _TradingViewIntroReveal(
                     animation: _entryController,
-                    delay: .54,
-                    child: _TradingViewIntroWorkflow(
+                    delay: .55,
+                    child: const _TradingViewIntroSectionHeading(
+                      kicker: 'READING FLOW',
+                      title: '하나씩 보고, 마지막에 겹쳐 읽습니다.',
+                      detail: 'A SIMPLE STUDY ROUTINE',
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _TradingViewIntroReveal(
+                    animation: _entryController,
+                    delay: .62,
+                    child: _TradingViewStudyReadingFlow(
                       compact: compact,
                       onOpenChart: widget.onOpenChart,
                     ),
                   ),
                   const SizedBox(height: 22),
+                  _TradingViewIntroReveal(
+                    animation: _entryController,
+                    delay: .70,
+                    child: _TradingViewStudyCta(
+                      compact: compact,
+                      onOpenChart: widget.onOpenChart,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
                   const Text(
-                    '실시간 시세와 상품 이용 가능 여부는 TradingView 및 거래소 정책과 지역 제한의 영향을 받을 수 있습니다.',
+                    '소개용 미니 차트는 지표의 구조와 읽는 순서를 설명하기 위한 개념 그래픽입니다. 실제 시세 차트는 차트 메뉴의 TradingView 위젯에서 제공합니다.',
                     style: TextStyle(
                       color: _TradingViewPalette.muted,
                       fontSize: 10,
-                      height: 1.4,
+                      height: 1.45,
                     ),
                   ),
                 ],
@@ -706,7 +770,7 @@ class _TradingViewIntroReveal extends StatelessWidget {
   Widget build(BuildContext context) {
     final reveal = CurvedAnimation(
       parent: animation,
-      curve: Interval(delay, 1, curve: Curves.easeOutCubic),
+      curve: Interval(delay, 1.0, curve: Curves.easeOutCubic),
     );
     final slide = Tween<Offset>(
       begin: const Offset(0, .08),
@@ -720,8 +784,8 @@ class _TradingViewIntroReveal extends StatelessWidget {
   }
 }
 
-class _TradingViewIntroHero extends StatelessWidget {
-  const _TradingViewIntroHero({
+class _TradingViewStudiesHero extends StatelessWidget {
+  const _TradingViewStudiesHero({
     required this.compact,
     required this.entryProgress,
     required this.pulseProgress,
@@ -735,99 +799,100 @@ class _TradingViewIntroHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final heroPadding = compact ? 22.0 : 36.0;
-    return Container(
-      height: compact ? 620 : 330,
-      decoration: const BoxDecoration(
-        color: _TradingViewPalette.ink,
-        border: Border(
-          left: BorderSide(color: _TradingViewPalette.green, width: 4),
-        ),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _TradingViewSignalPainter(
-                progress: pulseProgress,
-                intensity: entryProgress,
-              ),
-            ),
+    return SizedBox(
+      height: compact ? 560 : 420,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: _TradingViewPalette.ink,
+          border: Border(
+            left: BorderSide(color: _TradingViewPalette.green, width: 4),
           ),
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xf217191d),
-                    const Color(0x9017191d),
-                    const Color(0x2417191d),
-                  ],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _TradingViewStudyHeroPainter(
+                  progress: pulseProgress,
+                  intensity: entryProgress,
                 ),
               ),
             ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(heroPadding),
-            child: compact
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const _TradingViewHeroEyebrow(),
-                      const SizedBox(height: 24),
-                      _TradingViewHeroCopy(
-                        compact: compact,
-                        onOpenChart: onOpenChart,
-                      ),
-                      const SizedBox(height: 28),
-                      SizedBox(
-                        height: 205,
-                        child: _TradingViewHeroTerminal(
-                          progress: pulseProgress,
-                          compact: compact,
-                        ),
-                      ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xf217191d),
+                      const Color(0xb417191d),
+                      const Color(0x1a17191d),
                     ],
-                  )
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const _TradingViewHeroEyebrow(),
-                            const SizedBox(height: 24),
-                            _TradingViewHeroCopy(
-                              compact: compact,
-                              onOpenChart: onOpenChart,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 32),
-                      SizedBox(
-                        width: 320,
-                        height: 205,
-                        child: _TradingViewHeroTerminal(
-                          progress: pulseProgress,
-                          compact: compact,
-                        ),
-                      ),
-                    ],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
                   ),
-          ),
-        ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.all(compact ? 22 : 36),
+              child: compact
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const _TradingViewStudiesEyebrow(),
+                        const SizedBox(height: 22),
+                        _TradingViewStudiesHeroCopy(
+                          compact: compact,
+                          onOpenChart: onOpenChart,
+                        ),
+                        const SizedBox(height: 26),
+                        SizedBox(
+                          height: 206,
+                          child: _TradingViewStudySignalTerminal(
+                            compact: compact,
+                            progress: pulseProgress,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _TradingViewStudiesEyebrow(),
+                              const SizedBox(height: 22),
+                              _TradingViewStudiesHeroCopy(
+                                compact: compact,
+                                onOpenChart: onOpenChart,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 32),
+                        SizedBox(
+                          width: 330,
+                          height: 250,
+                          child: _TradingViewStudySignalTerminal(
+                            compact: compact,
+                            progress: pulseProgress,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _TradingViewHeroEyebrow extends StatelessWidget {
-  const _TradingViewHeroEyebrow();
+class _TradingViewStudiesEyebrow extends StatelessWidget {
+  const _TradingViewStudiesEyebrow();
 
   @override
   Widget build(BuildContext context) {
@@ -846,7 +911,7 @@ class _TradingViewHeroEyebrow extends StatelessWidget {
         ),
         SizedBox(width: 10),
         Text(
-          'PULSE / MARKET INTELLIGENCE',
+          'PULSE / STUDY SYSTEM',
           style: TextStyle(
             color: Color(0xffc8ced0),
             fontSize: 10,
@@ -859,8 +924,8 @@ class _TradingViewHeroEyebrow extends StatelessWidget {
   }
 }
 
-class _TradingViewHeroCopy extends StatelessWidget {
-  const _TradingViewHeroCopy({
+class _TradingViewStudiesHeroCopy extends StatelessWidget {
+  const _TradingViewStudiesHeroCopy({
     required this.compact,
     required this.onOpenChart,
   });
@@ -874,31 +939,31 @@ class _TradingViewHeroCopy extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '시장의 흐름을\n한 박자 먼저 읽다.',
+          '여섯 개의 신호로\n시장 흐름을 읽다.',
           style: TextStyle(
             color: Colors.white,
-            fontSize: compact ? 34 : 42,
-            height: 1.05,
+            fontSize: compact ? 34 : 44,
+            height: 1.04,
             fontWeight: FontWeight.w800,
-            letterSpacing: -1.2,
+            letterSpacing: -1.4,
           ),
         ),
         const SizedBox(height: 14),
         const Text(
-          '복잡한 가격 데이터는 정리하고,\n차트에서 확인해야 할 신호에 집중합니다.',
+          '추세·모멘텀·변동성·거래량을 나누어 보고,\n마지막에는 하나의 흐름으로 겹쳐 읽습니다.',
           style: TextStyle(
             color: Color(0xffb7bec1),
             fontSize: 13,
             height: 1.5,
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 22),
         SizedBox(
           width: compact ? double.infinity : null,
           child: ElevatedButton.icon(
             onPressed: onOpenChart,
             icon: const Icon(Icons.arrow_outward_rounded, size: 17),
-            label: const Text('차트 열기'),
+            label: const Text('차트에서 사용하기'),
             style: ElevatedButton.styleFrom(
               backgroundColor: _TradingViewPalette.green,
               foregroundColor: Colors.black,
@@ -920,14 +985,14 @@ class _TradingViewHeroCopy extends StatelessWidget {
   }
 }
 
-class _TradingViewHeroTerminal extends StatelessWidget {
-  const _TradingViewHeroTerminal({
-    required this.progress,
+class _TradingViewStudySignalTerminal extends StatelessWidget {
+  const _TradingViewStudySignalTerminal({
     required this.compact,
+    required this.progress,
   });
 
-  final double progress;
   final bool compact;
+  final double progress;
 
   @override
   Widget build(BuildContext context) {
@@ -943,7 +1008,7 @@ class _TradingViewHeroTerminal extends StatelessWidget {
           Row(
             children: [
               const Text(
-                'SIGNAL PREVIEW',
+                'STUDY SIGNAL MAP',
                 style: TextStyle(
                   color: Color(0xffe9edef),
                   fontSize: 10,
@@ -956,7 +1021,7 @@ class _TradingViewHeroTerminal extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 color: const Color(0x2200de5a),
                 child: const Text(
-                  'LIVE LAYER',
+                  'ILLUSTRATIVE',
                   style: TextStyle(
                     color: _TradingViewPalette.green,
                     fontSize: 8,
@@ -967,10 +1032,11 @@ class _TradingViewHeroTerminal extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Expanded(
+          const SizedBox(height: 10),
+          SizedBox(
+            height: compact ? 112 : 132,
             child: CustomPaint(
-              painter: _TradingViewSignalPainter(
+              painter: _TradingViewStudyHeroPainter(
                 progress: progress,
                 intensity: compact ? .8 : 1,
                 mini: true,
@@ -978,27 +1044,29 @@ class _TradingViewHeroTerminal extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          const Row(
-            children: [
-              Text(
-                'VOLATILITY MAP',
-                style: TextStyle(
-                  color: Color(0xff8f999b),
-                  fontSize: 8,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: .8,
-                ),
-              ),
-              Spacer(),
-              Text(
-                'SIGNAL PREVIEW',
-                style: TextStyle(
-                  color: Color(0xff8f999b),
-                  fontSize: 8,
-                  letterSpacing: .7,
-                ),
-              ),
-            ],
+          Wrap(
+            spacing: 5,
+            runSpacing: 5,
+            children: _TradingViewIntroductionPageState._studies
+                .map(
+                  (study) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
+                    color: const Color(0x14ffffff),
+                    child: Text(
+                      study.shortCode,
+                      style: TextStyle(
+                        color: study.accent,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: .5,
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
           ),
         ],
       ),
@@ -1006,8 +1074,8 @@ class _TradingViewHeroTerminal extends StatelessWidget {
   }
 }
 
-class _TradingViewSignalPainter extends CustomPainter {
-  const _TradingViewSignalPainter({
+class _TradingViewStudyHeroPainter extends CustomPainter {
+  const _TradingViewStudyHeroPainter({
     required this.progress,
     required this.intensity,
     this.mini = false,
@@ -1019,9 +1087,7 @@ class _TradingViewSignalPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (size.isEmpty) {
-      return;
-    }
+    if (size.isEmpty) return;
 
     final gridPaint = Paint()
       ..color = mini ? const Color(0x1cffffff) : const Color(0x16ffffff)
@@ -1030,25 +1096,25 @@ class _TradingViewSignalPainter extends CustomPainter {
       final y = size.height * index / 6;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
-    for (var index = 1; index < 9; index++) {
-      final x = size.width * index / 9;
+    for (var index = 1; index < 10; index++) {
+      final x = size.width * index / 10;
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     }
 
     const coordinates = <Offset>[
-      Offset(0, .72),
-      Offset(.08, .68),
-      Offset(.15, .74),
-      Offset(.22, .54),
-      Offset(.30, .60),
-      Offset(.38, .44),
-      Offset(.46, .49),
-      Offset(.54, .32),
+      Offset(0, .74),
+      Offset(.07, .69),
+      Offset(.14, .72),
+      Offset(.22, .57),
+      Offset(.30, .61),
+      Offset(.38, .45),
+      Offset(.46, .50),
+      Offset(.54, .35),
       Offset(.62, .39),
-      Offset(.70, .25),
-      Offset(.78, .29),
-      Offset(.86, .15),
-      Offset(1, .20),
+      Offset(.70, .28),
+      Offset(.78, .31),
+      Offset(.87, .16),
+      Offset(1, .21),
     ];
     final line = Path();
     for (var index = 0; index < coordinates.length; index++) {
@@ -1074,10 +1140,10 @@ class _TradingViewSignalPainter extends CustomPainter {
     canvas.drawPath(
       area,
       Paint()
-        ..shader = LinearGradient(
+        ..shader = const LinearGradient(
           colors: [
-            const Color(0x4200de5a),
-            const Color(0x0500de5a),
+            Color(0x4200de5a),
+            Color(0x0500de5a),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -1087,7 +1153,7 @@ class _TradingViewSignalPainter extends CustomPainter {
       line,
       Paint()
         ..color = _TradingViewPalette.green
-        ..strokeWidth = mini ? 2 : 2.4
+        ..strokeWidth = mini ? 2 : 2.3
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
@@ -1102,14 +1168,14 @@ class _TradingViewSignalPainter extends CustomPainter {
         ..strokeWidth = 1,
     );
     canvas.drawCircle(
-      Offset(scanX, size.height * .23),
+      Offset(scanX, size.height * .21),
       mini ? 3 : 4,
       Paint()..color = _TradingViewPalette.green,
     );
   }
 
   @override
-  bool shouldRepaint(covariant _TradingViewSignalPainter oldDelegate) {
+  bool shouldRepaint(covariant _TradingViewStudyHeroPainter oldDelegate) {
     return oldDelegate.progress != progress ||
         oldDelegate.intensity != intensity ||
         oldDelegate.mini != mini;
@@ -1130,7 +1196,7 @@ class _TradingViewIntroMetric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 96,
+      height: 94,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1145,6 +1211,7 @@ class _TradingViewIntroMetric extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             value,
@@ -1155,7 +1222,6 @@ class _TradingViewIntroMetric extends StatelessWidget {
               letterSpacing: -.6,
             ),
           ),
-          const Spacer(),
           Text(
             label,
             style: const TextStyle(
@@ -1165,7 +1231,6 @@ class _TradingViewIntroMetric extends StatelessWidget {
               letterSpacing: .8,
             ),
           ),
-          const SizedBox(height: 3),
           Text(
             detail,
             style: const TextStyle(
@@ -1237,166 +1302,24 @@ class _TradingViewIntroSectionHeading extends StatelessWidget {
   }
 }
 
-class _TradingViewIntroMarketCard extends StatefulWidget {
-  const _TradingViewIntroMarketCard({
-    required this.index,
-    required this.market,
-    required this.onTap,
-  });
-
-  final int index;
-  final TradingViewMarket market;
-  final VoidCallback onTap;
-
-  @override
-  State<_TradingViewIntroMarketCard> createState() =>
-      _TradingViewIntroMarketCardState();
-}
-
-class _TradingViewIntroMarketCardState
-    extends State<_TradingViewIntroMarketCard> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedSlide(
-        offset: _hovered ? const Offset(0, -.035) : Offset.zero,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(
-                color: _hovered
-                    ? _TradingViewPalette.green
-                    : _TradingViewPalette.border,
-              ),
-              boxShadow: _hovered
-                  ? const [
-                      BoxShadow(
-                        color: Color(0x1a000000),
-                        offset: Offset(0, 8),
-                        blurRadius: 18,
-                      ),
-                    ]
-                  : const [
-                      BoxShadow(
-                        color: Color(0x0d000000),
-                        offset: Offset(0, 2),
-                        blurRadius: 8,
-                      ),
-                    ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  alignment: Alignment.center,
-                  color: _hovered
-                      ? _TradingViewPalette.green
-                      : const Color(0xffeef1f2),
-                  child: Text(
-                    widget.index.toString().padLeft(2, '0'),
-                    style: const TextStyle(
-                      color: _TradingViewPalette.ink,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.market.ticker,
-                        style: const TextStyle(
-                          color: _TradingViewPalette.ink,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.market.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: _TradingViewPalette.body,
-                          fontSize: 11,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.market.tradingViewSymbol,
-                        style: const TextStyle(
-                          color: _TradingViewPalette.muted,
-                          fontSize: 9,
-                          letterSpacing: .2,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const Icon(
-                      Icons.arrow_outward_rounded,
-                      size: 16,
-                      color: _TradingViewPalette.body,
-                    ),
-                    const SizedBox(height: 11),
-                    Text(
-                      widget.market.exchange,
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        color: _TradingViewPalette.muted,
-                        fontSize: 8,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: .5,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TradingViewIntroFeature extends StatelessWidget {
-  const _TradingViewIntroFeature({
-    required this.icon,
-    required this.number,
+class _TradingViewStudyLensCard extends StatelessWidget {
+  const _TradingViewStudyLensCard({
+    required this.label,
     required this.title,
     required this.body,
+    required this.icon,
   });
 
-  final IconData icon;
-  final String number;
+  final String label;
   final String title;
   final String body;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 178,
-      padding: const EdgeInsets.all(18),
+      height: 130,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: _TradingViewPalette.border),
@@ -1407,41 +1330,46 @@ class _TradingViewIntroFeature extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 30,
-                height: 30,
+                width: 28,
+                height: 28,
                 alignment: Alignment.center,
                 color: _TradingViewPalette.ink,
-                child: Icon(icon, color: _TradingViewPalette.green, size: 16),
+                child: Icon(
+                  icon,
+                  color: _TradingViewPalette.green,
+                  size: 15,
+                ),
               ),
               const Spacer(),
               Text(
-                number,
+                label,
                 style: const TextStyle(
-                  color: _TradingViewPalette.green,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1,
+                  color: _TradingViewPalette.muted,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: .7,
                 ),
               ),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 14),
           Text(
             title,
             style: const TextStyle(
               color: _TradingViewPalette.ink,
-              fontSize: 13,
+              fontSize: 16,
               fontWeight: FontWeight.w800,
-              letterSpacing: .2,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 5),
           Text(
             body,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: _TradingViewPalette.body,
-              fontSize: 11,
-              height: 1.45,
+              fontSize: 10,
+              height: 1.4,
             ),
           ),
         ],
@@ -1450,8 +1378,793 @@ class _TradingViewIntroFeature extends StatelessWidget {
   }
 }
 
-class _TradingViewIntroWorkflow extends StatelessWidget {
-  const _TradingViewIntroWorkflow({
+class _TradingViewStudyCard extends StatelessWidget {
+  const _TradingViewStudyCard({
+    required this.data,
+    required this.compact,
+    required this.pulseProgress,
+  });
+
+  final _TradingViewStudyPreviewData data;
+  final bool compact;
+  final double pulseProgress;
+
+  @override
+  Widget build(BuildContext context) {
+    final visual = SizedBox(
+      width: compact ? double.infinity : 380,
+      height: 238,
+      child: _TradingViewStudyVisual(
+        data: data,
+        progress: pulseProgress,
+      ),
+    );
+    final copy = _TradingViewStudyCopy(data: data);
+
+    if (compact) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: _TradingViewPalette.border),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0d000000),
+              offset: Offset(0, 2),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            visual,
+            const SizedBox(height: 18),
+            copy,
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: _TradingViewPalette.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0d000000),
+            offset: Offset(0, 2),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: data.number == '01' ||
+              data.number == '03' ||
+              data.number == '05'
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                visual,
+                const SizedBox(width: 28),
+                Expanded(child: copy),
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: copy),
+                const SizedBox(width: 28),
+                visual,
+              ],
+            ),
+    );
+  }
+}
+
+class _TradingViewStudyCopy extends StatelessWidget {
+  const _TradingViewStudyCopy({required this.data});
+
+  final _TradingViewStudyPreviewData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              data.number,
+              style: const TextStyle(
+                color: _TradingViewPalette.green,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              data.category,
+              style: const TextStyle(
+                color: _TradingViewPalette.muted,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                letterSpacing: .8,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Text(
+          data.title,
+          style: const TextStyle(
+            color: _TradingViewPalette.ink,
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -.5,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          data.summary,
+          style: const TextStyle(
+            color: _TradingViewPalette.body,
+            fontSize: 13,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          color: const Color(0xfff1f4f5),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.tune_rounded,
+                color: _TradingViewPalette.label,
+                size: 14,
+              ),
+              const SizedBox(width: 7),
+              Text(
+                data.formula,
+                style: const TextStyle(
+                  color: _TradingViewPalette.label,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: .4,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        const Text(
+          'READING POINT',
+          style: TextStyle(
+            color: _TradingViewPalette.green,
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          data.reading,
+          style: const TextStyle(
+            color: _TradingViewPalette.body,
+            fontSize: 11,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              color: data.accent,
+            ),
+            const SizedBox(width: 7),
+            Text(
+              data.shortCode,
+              style: TextStyle(
+                color: data.accent,
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'ILLUSTRATIVE PREVIEW',
+              style: TextStyle(
+                color: _TradingViewPalette.muted,
+                fontSize: 8,
+                fontWeight: FontWeight.w700,
+                letterSpacing: .5,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _TradingViewStudyVisual extends StatelessWidget {
+  const _TradingViewStudyVisual({
+    required this.data,
+    required this.progress,
+  });
+
+  final _TradingViewStudyPreviewData data;
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _TradingViewPalette.ink,
+        border: Border.all(color: const Color(0xff2e3538)),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          CustomPaint(
+            painter: _TradingViewStudyPreviewPainter(
+              mode: data.mode,
+              accent: data.accent,
+              progress: progress,
+            ),
+          ),
+          Positioned(
+            left: 12,
+            top: 10,
+            child: Text(
+              data.shortCode,
+              style: TextStyle(
+                color: data.accent,
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+          const Positioned(
+            right: 12,
+            top: 10,
+            child: Text(
+              'CONCEPT VISUAL',
+              style: TextStyle(
+                color: Color(0xff8e999b),
+                fontSize: 8,
+                fontWeight: FontWeight.w700,
+                letterSpacing: .7,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 10,
+            child: Row(
+              children: [
+                Text(
+                  data.formula,
+                  style: const TextStyle(
+                    color: Color(0xffb9c1c3),
+                    fontSize: 8,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: .5,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: 6,
+                  height: 6,
+                  color: data.accent,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TradingViewStudyPreviewPainter extends CustomPainter {
+  const _TradingViewStudyPreviewPainter({
+    required this.mode,
+    required this.accent,
+    required this.progress,
+  });
+
+  final int mode;
+  final Color accent;
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+
+    _drawGrid(canvas, size);
+    switch (mode) {
+      case 0:
+        _drawTrend(canvas, size);
+        break;
+      case 1:
+        _drawRsi(canvas, size);
+        break;
+      case 2:
+        _drawMacd(canvas, size);
+        break;
+      case 3:
+        _drawBollinger(canvas, size);
+        break;
+      case 4:
+        _drawVolumePressure(canvas, size);
+        break;
+      case 5:
+        _drawSmartFlow(canvas, size);
+        break;
+      default:
+        _drawTrend(canvas, size);
+    }
+
+    final scanX = (progress * 1.3 % 1) * size.width;
+    canvas.drawLine(
+      Offset(scanX, 0),
+      Offset(scanX, size.height),
+      Paint()
+        ..color = accent.withValues(alpha: .28)
+        ..strokeWidth = 1,
+    );
+  }
+
+  void _drawGrid(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0x16ffffff)
+      ..strokeWidth = 1;
+    for (var index = 1; index < 5; index++) {
+      final y = size.height * index / 5;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+    for (var index = 1; index < 9; index++) {
+      final x = size.width * index / 9;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+  }
+
+  Path _line(
+    Size size,
+    List<Offset> points, {
+    double wave = .008,
+    double phase = 0,
+  }) {
+    final path = Path();
+    for (var index = 0; index < points.length; index++) {
+      final point = points[index];
+      final y = point.dy +
+          math.sin(progress * math.pi * 2 + phase + index * .7) * wave;
+      final offset = Offset(point.dx * size.width, y * size.height);
+      if (index == 0) {
+        path.moveTo(offset.dx, offset.dy);
+      } else {
+        path.lineTo(offset.dx, offset.dy);
+      }
+    }
+    return path;
+  }
+
+  void _drawTrend(Canvas canvas, Size size) {
+    const closes = <double>[.70, .64, .68, .59, .61, .51, .54, .43, .47, .35, .39, .27];
+    const opens = <double>[.73, .66, .63, .62, .57, .54, .50, .46, .43, .39, .34, .31];
+    for (var index = 0; index < closes.length; index++) {
+      final x = size.width * (.09 + index * .075);
+      final close = closes[index];
+      final open = opens[index];
+      final high = math.min(open, close) - .045;
+      final low = math.max(open, close) + .045;
+      final color = close <= open
+          ? const Color(0xffff8b76)
+          : _TradingViewPalette.green;
+      final candle = Rect.fromLTRB(
+        x - 4,
+        math.min(open, close) * size.height,
+        x + 4,
+        math.max(open, close) * size.height,
+      );
+      canvas.drawLine(
+        Offset(x, high * size.height),
+        Offset(x, low * size.height),
+        Paint()
+          ..color = color
+          ..strokeWidth = 1,
+      );
+      canvas.drawRect(candle, Paint()..color = color);
+    }
+    final fast = _line(
+      size,
+      const [
+        Offset(.05, .76),
+        Offset(.18, .67),
+        Offset(.31, .61),
+        Offset(.44, .54),
+        Offset(.57, .45),
+        Offset(.70, .36),
+        Offset(.84, .25),
+        Offset(.96, .19),
+      ],
+      wave: .006,
+      phase: .2,
+    );
+    final slow = _line(
+      size,
+      const [
+        Offset(.05, .79),
+        Offset(.18, .73),
+        Offset(.31, .68),
+        Offset(.44, .60),
+        Offset(.57, .52),
+        Offset(.70, .43),
+        Offset(.84, .34),
+        Offset(.96, .27),
+      ],
+      wave: .004,
+      phase: 1.1,
+    );
+    canvas.drawPath(
+      slow,
+      Paint()
+        ..color = const Color(0xff7eafff)
+        ..strokeWidth = 1.4
+        ..style = PaintingStyle.stroke,
+    );
+    canvas.drawPath(
+      fast,
+      Paint()
+        ..color = _TradingViewPalette.green
+        ..strokeWidth = 2.2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  void _drawRsi(Canvas canvas, Size size) {
+    _drawLevel(canvas, size, .28);
+    _drawLevel(canvas, size, .72);
+    final line = _line(
+      size,
+      const [
+        Offset(.04, .64),
+        Offset(.14, .57),
+        Offset(.23, .42),
+        Offset(.31, .32),
+        Offset(.40, .39),
+        Offset(.50, .62),
+        Offset(.60, .74),
+        Offset(.69, .66),
+        Offset(.78, .48),
+        Offset(.88, .29),
+        Offset(.97, .40),
+      ],
+      wave: .012,
+      phase: .6,
+    );
+    canvas.drawPath(
+      line,
+      Paint()
+        ..color = accent
+        ..strokeWidth = 2.2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+    for (final point in const [
+      Offset(.31, .32),
+      Offset(.60, .74),
+      Offset(.88, .29),
+    ]) {
+      canvas.drawCircle(
+        Offset(point.dx * size.width, point.dy * size.height),
+        3.5,
+        Paint()..color = accent,
+      );
+    }
+  }
+
+  void _drawMacd(Canvas canvas, Size size) {
+    _drawLevel(canvas, size, .64);
+    const bars = <double>[.08, .04, -.04, -.10, -.15, -.07, .05, .12, .18, .11, .04, -.03];
+    for (var index = 0; index < bars.length; index++) {
+      final value = bars[index];
+      final x = size.width * (.08 + index * .075);
+      final y = size.height * .64;
+      final barHeight = value.abs() * size.height * 1.8;
+      canvas.drawRect(
+        Rect.fromLTRB(
+          x - 5,
+          value >= 0 ? y - barHeight : y,
+          x + 5,
+          value >= 0 ? y : y + barHeight,
+        ),
+        Paint()
+          ..color = value >= 0
+              ? const Color(0x9e00de5a)
+              : const Color(0x9eff8b76),
+      );
+    }
+    canvas.drawPath(
+      _line(
+        size,
+        const [
+          Offset(.05, .61),
+          Offset(.18, .57),
+          Offset(.30, .66),
+          Offset(.43, .70),
+          Offset(.56, .60),
+          Offset(.69, .47),
+          Offset(.82, .42),
+          Offset(.96, .53),
+        ],
+        wave: .01,
+      ),
+      Paint()
+        ..color = accent
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+    canvas.drawPath(
+      _line(
+        size,
+        const [
+          Offset(.05, .64),
+          Offset(.18, .61),
+          Offset(.30, .63),
+          Offset(.43, .65),
+          Offset(.56, .62),
+          Offset(.69, .53),
+          Offset(.82, .48),
+          Offset(.96, .50),
+        ],
+        wave: .006,
+        phase: 1,
+      ),
+      Paint()
+        ..color = const Color(0xff8d98a0)
+        ..strokeWidth = 1.3
+        ..style = PaintingStyle.stroke,
+    );
+  }
+
+  void _drawBollinger(Canvas canvas, Size size) {
+    final upper = _line(
+      size,
+      const [
+        Offset(.04, .30),
+        Offset(.15, .25),
+        Offset(.26, .28),
+        Offset(.37, .22),
+        Offset(.48, .29),
+        Offset(.59, .24),
+        Offset(.70, .31),
+        Offset(.81, .27),
+        Offset(.96, .34),
+      ],
+      wave: .005,
+    );
+    final lower = _line(
+      size,
+      const [
+        Offset(.04, .61),
+        Offset(.15, .59),
+        Offset(.26, .57),
+        Offset(.37, .59),
+        Offset(.48, .54),
+        Offset(.59, .58),
+        Offset(.70, .55),
+        Offset(.81, .57),
+        Offset(.96, .62),
+      ],
+      wave: .005,
+      phase: 1.5,
+    );
+    final middle = _line(
+      size,
+      const [
+        Offset(.04, .45),
+        Offset(.15, .42),
+        Offset(.26, .43),
+        Offset(.37, .40),
+        Offset(.48, .42),
+        Offset(.59, .41),
+        Offset(.70, .43),
+        Offset(.81, .42),
+        Offset(.96, .48),
+      ],
+      wave: .004,
+    );
+    canvas.drawPath(
+      upper,
+      Paint()
+        ..color = accent
+        ..strokeWidth = 1.4
+        ..style = PaintingStyle.stroke,
+    );
+    canvas.drawPath(
+      lower,
+      Paint()
+        ..color = accent
+        ..strokeWidth = 1.4
+        ..style = PaintingStyle.stroke,
+    );
+    canvas.drawPath(
+      middle,
+      Paint()
+        ..color = const Color(0xff9ba5a7)
+        ..strokeWidth = 1
+        ..style = PaintingStyle.stroke,
+    );
+    canvas.drawPath(
+      _line(
+        size,
+        const [
+          Offset(.05, .47),
+          Offset(.16, .40),
+          Offset(.27, .44),
+          Offset(.38, .38),
+          Offset(.49, .43),
+          Offset(.60, .38),
+          Offset(.71, .44),
+          Offset(.82, .39),
+          Offset(.95, .46),
+        ],
+        wave: .012,
+        phase: .8,
+      ),
+      Paint()
+        ..color = Colors.white
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  void _drawVolumePressure(Canvas canvas, Size size) {
+    _drawLevel(canvas, size, .58);
+    const values = <double>[.18, -.11, .28, .06, -.20, -.08, .24, .35, .12, -.08, .20, .30];
+    for (var index = 0; index < values.length; index++) {
+      final value = values[index];
+      final x = size.width * (.08 + index * .075);
+      final base = size.height * .58;
+      final height = value.abs() * size.height;
+      canvas.drawRect(
+        Rect.fromLTRB(
+          x - 6,
+          value >= 0 ? base - height : base,
+          x + 6,
+          value >= 0 ? base : base + height,
+        ),
+        Paint()
+          ..color = value >= 0
+              ? const Color(0xbaffc857)
+              : const Color(0xbaff8b76),
+      );
+    }
+    canvas.drawPath(
+      _line(
+        size,
+        const [
+          Offset(.04, .61),
+          Offset(.15, .55),
+          Offset(.26, .58),
+          Offset(.37, .48),
+          Offset(.48, .53),
+          Offset(.59, .42),
+          Offset(.70, .46),
+          Offset(.81, .35),
+          Offset(.96, .39),
+        ],
+        wave: .012,
+      ),
+      Paint()
+        ..color = accent
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  void _drawSmartFlow(Canvas canvas, Size size) {
+    _drawLevel(canvas, size, .50);
+    final line = _line(
+      size,
+      const [
+        Offset(.04, .68),
+        Offset(.15, .61),
+        Offset(.25, .65),
+        Offset(.35, .43),
+        Offset(.46, .36),
+        Offset(.56, .48),
+        Offset(.67, .30),
+        Offset(.77, .39),
+        Offset(.87, .24),
+        Offset(.96, .28),
+      ],
+      wave: .014,
+      phase: .9,
+    );
+    canvas.drawPath(
+      line,
+      Paint()
+        ..color = accent
+        ..strokeWidth = 2.2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+    const spikes = <double>[.12, .05, .30, .10, .18, .42, .08, .22, .34, .16];
+    for (var index = 0; index < spikes.length; index++) {
+      final x = size.width * (.07 + index * .09);
+      final height = spikes[index] * size.height;
+      canvas.drawRect(
+        Rect.fromLTRB(
+          x - 3,
+          size.height * .86 - height,
+          x + 3,
+          size.height * .86,
+        ),
+        Paint()..color = const Color(0x6aff8f70),
+      );
+    }
+  }
+
+  void _drawLevel(Canvas canvas, Size size, double normalizedY) {
+    canvas.drawLine(
+      Offset(0, size.height * normalizedY),
+      Offset(size.width, size.height * normalizedY),
+      Paint()
+        ..color = const Color(0x559aa5a7)
+        ..strokeWidth = 1,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _TradingViewStudyPreviewPainter oldDelegate) {
+    return oldDelegate.mode != mode ||
+        oldDelegate.accent != accent ||
+        oldDelegate.progress != progress;
+  }
+}
+
+class _TradingViewStudyPreviewData {
+  const _TradingViewStudyPreviewData({
+    required this.number,
+    required this.category,
+    required this.title,
+    required this.shortCode,
+    required this.formula,
+    required this.summary,
+    required this.reading,
+    required this.mode,
+    required this.accent,
+  });
+
+  final String number;
+  final String category;
+  final String title;
+  final String shortCode;
+  final String formula;
+  final String summary;
+  final String reading;
+  final int mode;
+  final Color accent;
+}
+
+class _TradingViewStudyReadingFlow extends StatelessWidget {
+  const _TradingViewStudyReadingFlow({
     required this.compact,
     required this.onOpenChart,
   });
@@ -1461,21 +2174,21 @@ class _TradingViewIntroWorkflow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final steps = [
-      const _TradingViewIntroStep(
+    const steps = <_TradingViewStudyFlowStepData>[
+      _TradingViewStudyFlowStepData(
         number: '01',
-        title: '종목을 고릅니다',
-        body: '차트 메뉴에서 관심 자산을 선택하세요.',
+        title: '방향을 봅니다',
+        body: 'Adaptive Trend Ribbon으로 큰 흐름을 먼저 정리합니다.',
       ),
-      const _TradingViewIntroStep(
+      _TradingViewStudyFlowStepData(
         number: '02',
-        title: '시간을 바꿉니다',
-        body: '시간봉과 확대 도구는 TradingView 내부에서 조작합니다.',
+        title: '힘을 확인합니다',
+        body: 'RSI Pulse와 MACD Momentum으로 움직임의 속도를 비교합니다.',
       ),
-      const _TradingViewIntroStep(
+      _TradingViewStudyFlowStepData(
         number: '03',
-        title: '신호를 쌓습니다',
-        body: '다음 업데이트에서 자체 보조지표 6종을 연결합니다.',
+        title: '참여를 겹칩니다',
+        body: 'Bollinger Squeeze, Volume Pressure, Smart Flow를 함께 읽습니다.',
       ),
     ];
 
@@ -1486,14 +2199,15 @@ class _TradingViewIntroWorkflow extends StatelessWidget {
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _TradingViewWorkflowIntro(onOpenChart: onOpenChart),
+                _TradingViewStudyFlowIntro(onOpenChart: onOpenChart),
                 const SizedBox(height: 24),
-                ...steps.map(
-                  (step) => Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: step,
+                for (var index = 0; index < steps.length; index++)
+                  Padding(
+                    padding: EdgeInsets.only(
+                      bottom: index == steps.length - 1 ? 0 : 12,
+                    ),
+                    child: _TradingViewStudyFlowStep(data: steps[index]),
                   ),
-                ),
               ],
             )
           : Row(
@@ -1501,9 +2215,9 @@ class _TradingViewIntroWorkflow extends StatelessWidget {
               children: [
                 Expanded(
                   flex: 4,
-                  child: _TradingViewWorkflowIntro(onOpenChart: onOpenChart),
+                  child: _TradingViewStudyFlowIntro(onOpenChart: onOpenChart),
                 ),
-                const SizedBox(width: 30),
+                const SizedBox(width: 28),
                 Expanded(
                   flex: 6,
                   child: Column(
@@ -1511,9 +2225,9 @@ class _TradingViewIntroWorkflow extends StatelessWidget {
                       for (var index = 0; index < steps.length; index++)
                         Padding(
                           padding: EdgeInsets.only(
-                            bottom: index == steps.length - 1 ? 0 : 14,
+                            bottom: index == steps.length - 1 ? 0 : 12,
                           ),
-                          child: steps[index],
+                          child: _TradingViewStudyFlowStep(data: steps[index]),
                         ),
                     ],
                   ),
@@ -1524,8 +2238,8 @@ class _TradingViewIntroWorkflow extends StatelessWidget {
   }
 }
 
-class _TradingViewWorkflowIntro extends StatelessWidget {
-  const _TradingViewWorkflowIntro({required this.onOpenChart});
+class _TradingViewStudyFlowIntro extends StatelessWidget {
+  const _TradingViewStudyFlowIntro({required this.onOpenChart});
 
   final VoidCallback onOpenChart;
 
@@ -1535,7 +2249,7 @@ class _TradingViewWorkflowIntro extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'FROM OVERVIEW TO ACTION',
+          'FROM SIGNAL TO CONTEXT',
           style: TextStyle(
             color: _TradingViewPalette.green,
             fontSize: 10,
@@ -1545,7 +2259,7 @@ class _TradingViewWorkflowIntro extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         const Text(
-          '다음 차트를\n지금 확인하세요.',
+          '한 개씩 확인하고,\n마지막에 겹쳐 봅니다.',
           style: TextStyle(
             color: Colors.white,
             fontSize: 28,
@@ -1556,7 +2270,7 @@ class _TradingViewWorkflowIntro extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const Text(
-          '관심 종목과 차트 도구를 한곳에 모아, 시장을 보는 루틴을 짧게 만듭니다.',
+          '지표를 많이 켜는 것보다 각 신호가 어떤 질문에 답하는지 아는 것이 먼저입니다.',
           style: TextStyle(
             color: Color(0xffaab3b5),
             fontSize: 11,
@@ -1586,8 +2300,8 @@ class _TradingViewWorkflowIntro extends StatelessWidget {
   }
 }
 
-class _TradingViewIntroStep extends StatelessWidget {
-  const _TradingViewIntroStep({
+class _TradingViewStudyFlowStepData {
+  const _TradingViewStudyFlowStepData({
     required this.number,
     required this.title,
     required this.body,
@@ -1596,6 +2310,12 @@ class _TradingViewIntroStep extends StatelessWidget {
   final String number;
   final String title;
   final String body;
+}
+
+class _TradingViewStudyFlowStep extends StatelessWidget {
+  const _TradingViewStudyFlowStep({required this.data});
+
+  final _TradingViewStudyFlowStepData data;
 
   @override
   Widget build(BuildContext context) {
@@ -1611,7 +2331,7 @@ class _TradingViewIntroStep extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            number,
+            data.number,
             style: const TextStyle(
               color: _TradingViewPalette.green,
               fontSize: 10,
@@ -1625,7 +2345,7 @@ class _TradingViewIntroStep extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  data.title,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -1634,7 +2354,7 @@ class _TradingViewIntroStep extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  body,
+                  data.body,
                   style: const TextStyle(
                     color: Color(0xff9ba5a7),
                     fontSize: 10,
@@ -1648,6 +2368,110 @@ class _TradingViewIntroStep extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TradingViewStudyCta extends StatelessWidget {
+  const _TradingViewStudyCta({
+    required this.compact,
+    required this.onOpenChart,
+  });
+
+  final bool compact;
+  final VoidCallback onOpenChart;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(compact ? 20 : 26),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: _TradingViewPalette.border),
+      ),
+      child: compact
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const _TradingViewStudyCtaCopy(),
+                const SizedBox(height: 18),
+                ElevatedButton.icon(
+                  onPressed: onOpenChart,
+                  icon: const Icon(Icons.arrow_outward_rounded, size: 16),
+                  label: const Text('차트 열기'),
+                  style: _TradingViewStudyCtaButton.style,
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                const Expanded(child: _TradingViewStudyCtaCopy()),
+                const SizedBox(width: 24),
+                ElevatedButton.icon(
+                  onPressed: onOpenChart,
+                  icon: const Icon(Icons.arrow_outward_rounded, size: 16),
+                  label: const Text('차트 열기'),
+                  style: _TradingViewStudyCtaButton.style,
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class _TradingViewStudyCtaCopy extends StatelessWidget {
+  const _TradingViewStudyCtaCopy();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'READY TO READ',
+          style: TextStyle(
+            color: _TradingViewPalette.green,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.1,
+          ),
+        ),
+        SizedBox(height: 8),
+        Text(
+          '신호를 직접 차트에 올려보세요.',
+          style: TextStyle(
+            color: _TradingViewPalette.ink,
+            fontSize: 23,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -.5,
+          ),
+        ),
+        SizedBox(height: 6),
+        Text(
+          '차트 메뉴에서 TradingView 위젯의 시간봉과 도구를 함께 사용할 수 있습니다.',
+          style: TextStyle(
+            color: _TradingViewPalette.body,
+            fontSize: 11,
+            height: 1.45,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TradingViewStudyCtaButton {
+  static final style = ElevatedButton.styleFrom(
+    backgroundColor: _TradingViewPalette.green,
+    foregroundColor: Colors.black,
+    elevation: 0,
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.zero,
+    ),
+    textStyle: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w800,
+    ),
+  );
 }
 
 class _TradingViewChartCard extends StatelessWidget {
