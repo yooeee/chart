@@ -714,7 +714,7 @@ class _TradingViewIntroReveal extends StatelessWidget {
     ).animate(reveal);
 
     return FadeTransition(
-      opacity: reveal,
+      opacity: Tween<double>(begin: .72, end: 1).animate(reveal),
       child: SlideTransition(position: slide, child: child),
     );
   }
