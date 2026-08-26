@@ -1496,7 +1496,7 @@ class _TradingViewStudyProgress extends StatelessWidget {
         ),
         const Spacer(),
         Text(
-          (activeIndex + 1).toString().padLeft(2, '0') + ' / 06',
+          '${(activeIndex + 1).toString().padLeft(2, '0')} / 06',
           style: const TextStyle(
             color: _TradingViewPalette.muted,
             fontSize: 9,
