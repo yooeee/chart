@@ -1,3 +1,4 @@
+# Flutter/Dart generated files
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
@@ -8,11 +9,63 @@ build/
 coverage/
 lib/generated/
 *.iml
+
+# IDE and operating-system files
 .idea/
 .vscode/
+.DS_Store
+Thumbs.db
+
+# Flutter platform local/generated files
+android/.gradle/
+android/local.properties
+android/captures/
 ios/Pods/
 ios/.symlinks/
 ios/Flutter/ephemeral/
-android/.gradle/
-android/local.properties
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+macos/Pods/
+macos/Flutter/ephemeral/
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
 web/.last_build_id
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+*.local.*
+*.secret
+/secrets/
+**/secrets/
+credentials/
+**/credentials/
+credentials*.json
+service-account*.json
+firebase-adminsdk-*.json
+
+# Firebase configuration files containing app credentials
+google-services.json
+GoogleService-Info.plist
+
+# Signing certificates, private keys, and provisioning files
+key.properties
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.key
+
+# Release artifacts
+*.apk
+*.aab
+*.ipa
+/artifacts/
+/release/
+/dist/
