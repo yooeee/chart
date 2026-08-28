@@ -4,7 +4,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/market_bar.dart';
 import '../../domain/entities/market_symbol.dart';
 import '../../domain/entities/market_symbol_catalog.dart';
-import '../../domain/entities/market_timeframe.dart';
 import '../../domain/enums/indicator_type.dart';
 import 'market_chart.dart';
 

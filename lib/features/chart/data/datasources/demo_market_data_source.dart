@@ -23,7 +23,6 @@ abstract final class DemoMarketDataSource {
     String ticker, {
     int count = 180,
   }) {
-    final marketSymbol = MarketSymbolCatalog.findByTicker(ticker);
     final referencePrice = _referencePriceByTicker[ticker] ?? 1000;
     final referenceChangePercent =
         _referenceChangePercentByTicker[ticker] ?? 0;
