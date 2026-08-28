@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import '../../domain/entities/market_bar.dart';
-import '../../domain/entities/market_symbol_catalog.dart';
 
 /// Deterministic fixture data used by indicator tests and local previews.
 abstract final class DemoMarketDataSource {
