@@ -246,11 +246,12 @@ class _TradingViewBrandMark extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
+        Image.asset(
+          'assets/branding/pulse_chart_icon.png',
           width: 26,
           height: 26,
-          color: AppColors.green,
-          child: const Icon(Icons.bolt_rounded, color: Colors.black, size: 18),
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.high,
         ),
         const SizedBox(width: 9),
         const Text('PULSE', style: TextStyle(color: AppColors.ink, fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 1.6)),
