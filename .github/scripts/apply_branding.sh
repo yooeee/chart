@@ -9,21 +9,14 @@ if [[ ! -f "$brand_icon" ]]; then
   exit 1
 fi
 
-if command -v magick >/dev/null 2>&1; then
-  image_tool=(magick)
-elif command -v convert >/dev/null 2>&1; then
-  image_tool=(convert)
-else
-  echo "ImageMagick is required to generate platform icons." >&2
-  exit 1
-fi
+brand_directory="$(dirname "$brand_icon")"
 
 apply_web_branding() {
   mkdir -p web/icons
 
-  "${image_tool[@]}" "$brand_icon" -resize 512x512 -strip web/favicon.png
-  "${image_tool[@]}" "$brand_icon" -resize 192x192 -strip web/icons/Icon-192.png
-  "${image_tool[@]}" "$brand_icon" -resize 512x512 -strip web/icons/Icon-512.png
+  cp "$brand_directory/web/favicon.png" web/favicon.png
+  cp "$brand_directory/web/Icon-192.png" web/icons/Icon-192.png
+  cp "$brand_directory/web/Icon-512.png" web/icons/Icon-512.png
 
   cat > web/index.html <<'HTML'
 <!DOCTYPE html>
@@ -82,17 +75,17 @@ apply_android_branding() {
   sed -i.bak 's#@mipmap/ic_launcher#@mipmap/pulse_chart_icon#g' "$manifest"
   rm -f "$manifest.bak"
 
-  while read -r density size; do
+  while read -r density; do
     mkdir -p "android/app/src/main/res/mipmap-$density"
-    "${image_tool[@]}" "$brand_icon" -resize "${size}x${size}" -strip \
+    cp "$brand_directory/android/mipmap-$density/pulse_chart_icon.png" \
       "android/app/src/main/res/mipmap-$density/pulse_chart_icon.png"
-  done <<'ICONS'
-mdpi 48
-hdpi 72
-xhdpi 96
-xxhdpi 144
-xxxhdpi 192
-ICONS
+  done <<'DENSITIES'
+mdpi
+hdpi
+xhdpi
+xxhdpi
+xxxhdpi
+DENSITIES
 }
 
 case "$target" in
