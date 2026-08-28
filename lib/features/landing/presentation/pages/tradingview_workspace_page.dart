@@ -1549,10 +1549,12 @@ class _TradingViewLandingFooter extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 5,
-                height: 5,
-                color: AppColors.green,
+              Image.asset(
+                'assets/branding/pulse_chart_icon.png',
+                width: compact ? 18 : 20,
+                height: compact ? 18 : 20,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
               ),
               const SizedBox(width: 7),
               const Text(
