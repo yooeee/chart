@@ -1480,29 +1480,39 @@ class _TradingViewScrollStudySlide extends StatelessWidget {
                             ),
                     ),
                     SizedBox(height: compact ? 10 : 18),
-                    Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          studyIndex == _TradingViewIntroductionPageState._studies.length - 1
-                              ? 'LAST SIGNAL / OPEN CHART'
-                              : 'SCROLL / NEXT SIGNAL',
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: .8,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              studyIndex == _TradingViewIntroductionPageState._studies.length - 1
+                                  ? 'LAST SIGNAL / OPEN CHART'
+                                  : 'SCROLL / NEXT SIGNAL',
+                              style: const TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: .8,
+                              ),
+                            ),
+                            const Spacer(),
+                            Icon(
+                              studyIndex == _TradingViewIntroductionPageState._studies.length - 1
+                                  ? Icons.arrow_outward_rounded
+                                  : Icons.south_rounded,
+                              color: studyIndex == _TradingViewIntroductionPageState._studies.length - 1
+                                  ? data.accent
+                                  : AppColors.muted,
+                              size: 15,
+                            ),
+                          ],
                         ),
-                        const Spacer(),
-                        Icon(
-                          studyIndex == _TradingViewIntroductionPageState._studies.length - 1
-                              ? Icons.arrow_outward_rounded
-                              : Icons.south_rounded,
-                          color: studyIndex == _TradingViewIntroductionPageState._studies.length - 1
-                              ? data.accent
-                              : AppColors.muted,
-                          size: 15,
-                        ),
+                        if (studyIndex ==
+                            _TradingViewIntroductionPageState._studies.length - 1) ...[
+                          SizedBox(height: compact ? 8 : 12),
+                          _TradingViewLandingFooter(compact: compact),
+                        ],
                       ],
                     ),
                   ],
@@ -1512,6 +1522,69 @@ class _TradingViewScrollStudySlide extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _TradingViewLandingFooter extends StatelessWidget {
+  const _TradingViewLandingFooter({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10 : 14,
+        vertical: compact ? 7 : 9,
+      ),
+      color: AppColors.ink,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 14,
+        runSpacing: 5,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 5,
+                height: 5,
+                color: AppColors.green,
+              ),
+              const SizedBox(width: 7),
+              const Text(
+                'PULSE CHART',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
+          const Text(
+            'CHARTS BY TRADINGVIEW',
+            style: TextStyle(
+              color: Color(0xffaab3b5),
+              fontSize: 8,
+              fontWeight: FontWeight.w700,
+              letterSpacing: .6,
+            ),
+          ),
+          const Text(
+            '© 2026 PULSE CHART / ALL RIGHTS RESERVED',
+            style: TextStyle(
+              color: Color(0xff7f898c),
+              fontSize: 8,
+              fontWeight: FontWeight.w700,
+              letterSpacing: .35,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
