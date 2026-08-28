@@ -30,6 +30,9 @@ jobs:
       - name: Add Web platform
         run: flutter create --platforms=web .
 
+      - name: Apply Pulse Chart branding
+        run: ./.github/scripts/apply_branding.sh web
+
       - name: Install dependencies
         run: flutter pub get
 

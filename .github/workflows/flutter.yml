@@ -31,6 +31,8 @@ jobs:
           cache: true
       - name: Generate Android platform
         run: flutter create --platforms=android .
+      - name: Apply Pulse Chart app icon
+        run: ./.github/scripts/apply_branding.sh android
       - name: Configure Android WebView
         shell: bash
         run: |
