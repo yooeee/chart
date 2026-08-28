@@ -9,7 +9,7 @@ import '../../domain/enums/indicator_type.dart';
 import 'market_chart.dart';
 
 class ChartTopNavigation extends StatelessWidget {
-  const ChartTopNavigation({required this.isLoading, required this.hasError});
+  const ChartTopNavigation({super.key, required this.isLoading, required this.hasError});
 
   final bool isLoading;
   final bool hasError;
@@ -58,7 +58,7 @@ class ChartTopNavigation extends StatelessWidget {
 }
 
 class BrandMark extends StatelessWidget {
-  const BrandMark();
+  const BrandMark({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +92,7 @@ class BrandMark extends StatelessWidget {
 }
 
 class ChartNavigationItem extends StatelessWidget {
-  const ChartNavigationItem({required this.label, this.active = false});
+  const ChartNavigationItem({super.key, required this.label, this.active = false});
 
   final String label;
   final bool active;
@@ -119,7 +119,7 @@ class ChartNavigationItem extends StatelessWidget {
 }
 
 class ChartTopAction extends StatelessWidget {
-  const ChartTopAction({required this.icon, required this.onPressed});
+  const ChartTopAction({super.key, required this.icon, required this.onPressed});
 
   final IconData icon;
   final VoidCallback onPressed;
@@ -135,7 +135,7 @@ class ChartTopAction extends StatelessWidget {
 }
 
 class MarketStatusBadge extends StatelessWidget {
-  const MarketStatusBadge({required this.isLoading, required this.hasError});
+  const MarketStatusBadge({super.key, required this.isLoading, required this.hasError});
 
   final bool isLoading;
   final bool hasError;
@@ -164,7 +164,7 @@ class MarketStatusBadge extends StatelessWidget {
 }
 
 class UserAvatar extends StatelessWidget {
-  const UserAvatar();
+  const UserAvatar({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -179,7 +179,7 @@ class UserAvatar extends StatelessWidget {
 }
 
 class ChartWorkspaceHeader extends StatelessWidget {
-  const ChartWorkspaceHeader({
+  const ChartWorkspaceHeader({super.key, 
     required this.marketSymbol,
     required this.latestPrice,
     required this.priceChangePercent,
@@ -261,7 +261,7 @@ class ChartWorkspaceHeader extends StatelessWidget {
 }
 
 class TickerSelector extends StatelessWidget {
-  const TickerSelector({required this.selectedTicker, required this.onChanged});
+  const TickerSelector({super.key, required this.selectedTicker, required this.onChanged});
 
   final String selectedTicker;
   final ValueChanged<String> onChanged;
@@ -293,7 +293,7 @@ class TickerSelector extends StatelessWidget {
 }
 
 class TimeRangeSelector extends StatelessWidget {
-  const TimeRangeSelector({required this.selectedTimeRange, required this.onChanged});
+  const TimeRangeSelector({super.key, required this.selectedTimeRange, required this.onChanged});
 
   final String selectedTimeRange;
   final ValueChanged<String> onChanged;
@@ -323,7 +323,7 @@ class TimeRangeSelector extends StatelessWidget {
 }
 
 class MarketDataStrip extends StatelessWidget {
-  const MarketDataStrip({
+  const MarketDataStrip({super.key, 
     required this.marketSymbol,
     required this.latestBarTimestamp,
     required this.isLoading,
@@ -391,7 +391,7 @@ class MarketDataStrip extends StatelessWidget {
 }
 
 class MarketChartCard extends StatelessWidget {
-  const MarketChartCard({
+  const MarketChartCard({super.key, 
     required this.marketBars,
     required this.activeIndicatorTypes,
     required this.isLoading,
@@ -444,7 +444,7 @@ class MarketChartCard extends StatelessWidget {
 }
 
 class ChartMessage extends StatelessWidget {
-  const ChartMessage({required this.message, this.isError = false, this.onRetryRequested});
+  const ChartMessage({super.key, required this.message, this.isError = false, this.onRetryRequested});
 
   final String message;
   final bool isError;
@@ -490,7 +490,7 @@ class ChartMessage extends StatelessWidget {
 }
 
 class IndicatorPanel extends StatelessWidget {
-  const IndicatorPanel({required this.activeIndicatorTypes, required this.onToggle, this.compact = false});
+  const IndicatorPanel({super.key, required this.activeIndicatorTypes, required this.onToggle, this.compact = false});
 
   final Set<IndicatorType> activeIndicatorTypes;
   final ValueChanged<IndicatorType> onToggle;
@@ -556,7 +556,7 @@ class IndicatorPanel extends StatelessWidget {
 }
 
 class IndicatorTile extends StatelessWidget {
-  const IndicatorTile({required this.indicatorType, required this.selected, required this.onTap});
+  const IndicatorTile({super.key, required this.indicatorType, required this.selected, required this.onTap});
 
   final IndicatorType indicatorType;
   final bool selected;

@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -382,7 +385,7 @@ class _TradingViewMarketSelector extends StatelessWidget {
             (item) => PopupMenuItem<TradingViewMarket>(
               value: item,
               height: 40,
-              child: Text('${item.ticker}  ·  ${item.name}', style: const TextStyle(color: AppColors.ink, fontSize: 13)),
+              child: Text('${item.ticker}  ·  ${item.displayName}', style: const TextStyle(color: AppColors.ink, fontSize: 13)),
             ),
           )
           .toList(),
