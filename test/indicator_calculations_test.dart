@@ -1,11 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:pulse_chart/indicators/indicator_calculations.dart';
-import 'package:pulse_chart/models/market_data.dart';
+import 'package:pulse_chart/features/chart/domain/services/technical_indicator_calculator.dart';
+import 'package:pulse_chart/features/chart/data/datasources/demo_market_data_source.dart';
+import 'package:pulse_chart/features/chart/data/datasources/twelve_data_remote_data_source.dart';
 
 void main() {
   test('fixture bars keep valid OHLC relationships', () {
-    final bars = DemoMarketDataSource.barsFor('NEXON');
+    final bars = DemoMarketDataSource.generateMarketBars('NEXON');
 
     expect(bars, hasLength(180));
     for (final bar in bars) {
@@ -18,7 +19,7 @@ void main() {
   });
 
   test('Twelve Data values are parsed in ascending time order', () {
-    final bars = TwelveDataMarketDataSource.parseBars({
+    final marketBarModels = TwelveDataRemoteDataSource.parseMarketBarModels({
       'status': 'ok',
       'values': [
         {
@@ -40,24 +41,26 @@ void main() {
       ],
     });
 
+    final bars = marketBarModels.map((model) => model.toEntity()).toList();
+
     expect(bars, hasLength(2));
     expect(bars.first.close, 102);
     expect(bars.last.close, 104);
-    expect(bars.first.time.isBefore(bars.last.time), isTrue);
+    expect(bars.first.timestamp.isBefore(bars.last.timestamp), isTrue);
   });
 
   test('RSI is bounded between zero and one hundred', () {
     final values = List<double>.generate(80, (index) => 100 + index * 0.35);
-    final rsi = IndicatorCalculator.rsi(values, 14).whereType<double>();
+    final rsi = TechnicalIndicatorCalculator.rsi(values, 14).whereType<double>();
 
     expect(rsi, isNotEmpty);
     expect(rsi.every((value) => value >= 0 && value <= 100), isTrue);
   });
 
   test('MACD returns aligned series', () {
-    final bars = DemoMarketDataSource.barsFor('NAVER');
+    final bars = DemoMarketDataSource.generateMarketBars('NAVER');
     final closes = bars.map((bar) => bar.close).toList();
-    final macd = IndicatorCalculator.macd(closes);
+    final macd = TechnicalIndicatorCalculator.macd(closes);
 
     expect(macd.primary, hasLength(closes.length));
     expect(macd.secondary, hasLength(closes.length));

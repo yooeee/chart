@@ -2,109 +2,45 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../indicators/indicator_calculations.dart';
-import '../models/market_data.dart';
-
-enum IndicatorKind {
-  trendRibbon,
-  rsiPulse,
-  macdMomentum,
-  bollingerSqueeze,
-  volumePressure,
-  smartFlow,
-}
-
-extension IndicatorKindDetails on IndicatorKind {
-  String get label {
-    switch (this) {
-      case IndicatorKind.trendRibbon:
-        return 'Adaptive Trend Ribbon';
-      case IndicatorKind.rsiPulse:
-        return 'RSI Pulse';
-      case IndicatorKind.macdMomentum:
-        return 'MACD Momentum';
-      case IndicatorKind.bollingerSqueeze:
-        return 'Bollinger Squeeze';
-      case IndicatorKind.volumePressure:
-        return 'Volume Pressure';
-      case IndicatorKind.smartFlow:
-        return 'Smart Flow';
-    }
-  }
-
-  String get shortLabel {
-    switch (this) {
-      case IndicatorKind.trendRibbon:
-        return 'TREND';
-      case IndicatorKind.rsiPulse:
-        return 'RSI';
-      case IndicatorKind.macdMomentum:
-        return 'MACD';
-      case IndicatorKind.bollingerSqueeze:
-        return 'BOLL';
-      case IndicatorKind.volumePressure:
-        return 'V-PRESS';
-      case IndicatorKind.smartFlow:
-        return 'FLOW';
-    }
-  }
-
-  String get summary {
-    switch (this) {
-      case IndicatorKind.trendRibbon:
-        return 'EMA 21/55의 방향과 변동성을 한 줄로 읽습니다.';
-      case IndicatorKind.rsiPulse:
-        return '14기간 RSI와 5기간 신호선의 속도를 봅니다.';
-      case IndicatorKind.macdMomentum:
-        return '추세 방향과 모멘텀 변화를 히스토그램으로 표시합니다.';
-      case IndicatorKind.bollingerSqueeze:
-        return '밴드 폭의 수축·확장을 통해 변동성 국면을 추적합니다.';
-      case IndicatorKind.volumePressure:
-        return '가격 움직임에 실린 거래량의 매수·매도 압력을 계산합니다.';
-      case IndicatorKind.smartFlow:
-        return '거래량 방향성과 현재 거래량 이탈을 함께 읽습니다.';
-    }
-  }
-
-  bool get isOverlay =>
-      this == IndicatorKind.trendRibbon || this == IndicatorKind.bollingerSqueeze;
-}
+import '../../domain/entities/market_bar.dart';
+import '../../domain/enums/indicator_type.dart';
+import '../../domain/services/technical_indicator_calculator.dart';
 
 class MarketChart extends StatefulWidget {
   const MarketChart({
     super.key,
-    required this.bars,
-    required this.activeIndicators,
+    required this.marketBars,
+    required this.activeIndicatorTypes,
   });
 
-  final List<MarketBar> bars;
-  final Set<IndicatorKind> activeIndicators;
+  final List<MarketBar> marketBars;
+  final Set<IndicatorType> activeIndicatorTypes;
 
   @override
   State<MarketChart> createState() => _MarketChartState();
 }
 
 class _MarketChartState extends State<MarketChart> {
-  double _zoom = 1;
-  double _zoomAtGestureStart = 1;
-  int? _hoverIndex;
+  double _chartZoom = 1;
+  double _chartZoomAtGestureStart = 1;
+  int? _hoveredBarIndex;
 
-  int? _indexAt(Offset position, double width) {
+  int? _getBarIndexAtPosition(Offset position, double width) {
     const leftAxis = 52.0;
     const rightAxis = 14.0;
     final chartWidth = width - leftAxis - rightAxis;
     if (chartWidth <= 0 || position.dx < leftAxis || position.dx > width - rightAxis) {
       return null;
     }
-    final visibleCount = math.max(32, (widget.bars.length / _zoom).round()).toInt();
-    final start = math.max(0, widget.bars.length - visibleCount).toInt();
+    final visibleCount = math.max(32, (widget.marketBars.length / _chartZoom).round()).toInt();
+    final start = math.max(0, widget.marketBars.length - visibleCount).toInt();
     final ratio = ((position.dx - leftAxis) / chartWidth).clamp(0.0, 1.0);
-    return (start + ratio * (visibleCount - 1)).round().clamp(0, widget.bars.length - 1).toInt();
+    return (start + ratio * (visibleCount - 1)).round().clamp(0, widget.marketBars.length - 1).toInt();
   }
 
-  void _updateHover(Offset position, double width) {
-    final index = _indexAt(position, width);
-    if (index != _hoverIndex) setState(() => _hoverIndex = index);
+  void _updateHoveredBar(Offset position, double width) {
+    final index = _getBarIndexAtPosition(position, width);
+    if (index != _hoveredBarIndex) setState(() => _hoveredBarIndex = index);
   }
 
   @override
@@ -112,24 +48,24 @@ class _MarketChartState extends State<MarketChart> {
     return LayoutBuilder(
       builder: (context, constraints) {
         return MouseRegion(
-          onExit: (_) => setState(() => _hoverIndex = null),
+          onExit: (_) => setState(() => _hoveredBarIndex = null),
           child: Listener(
-            onPointerHover: (event) => _updateHover(event.localPosition, constraints.maxWidth),
-            onPointerMove: (event) => _updateHover(event.localPosition, constraints.maxWidth),
+            onPointerHover: (event) => _updateHoveredBar(event.localPosition, constraints.maxWidth),
+            onPointerMove: (event) => _updateHoveredBar(event.localPosition, constraints.maxWidth),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onScaleStart: (_) => _zoomAtGestureStart = _zoom,
+              onScaleStart: (_) => _chartZoomAtGestureStart = _chartZoom,
               onScaleUpdate: (details) {
-                final next = (_zoomAtGestureStart * details.scale).clamp(1.0, 4.5).toDouble();
-                if (next != _zoom) setState(() => _zoom = next);
+                final next = (_chartZoomAtGestureStart * details.scale).clamp(1.0, 4.5).toDouble();
+                if (next != _chartZoom) setState(() => _chartZoom = next);
               },
-              onDoubleTap: () => setState(() => _zoom = 1),
+              onDoubleTap: () => setState(() => _chartZoom = 1),
               child: CustomPaint(
                 painter: _MarketChartPainter(
-                  bars: widget.bars,
-                  activeIndicators: widget.activeIndicators,
-                  zoom: _zoom,
-                  hoverIndex: _hoverIndex,
+                  marketBars: widget.marketBars,
+                  activeIndicatorTypes: widget.activeIndicatorTypes,
+                  chartZoom: _chartZoom,
+                  hoveredBarIndex: _hoveredBarIndex,
                 ),
                 child: const SizedBox.expand(),
               ),
@@ -143,16 +79,16 @@ class _MarketChartState extends State<MarketChart> {
 
 class _MarketChartPainter extends CustomPainter {
   _MarketChartPainter({
-    required this.bars,
-    required this.activeIndicators,
-    required this.zoom,
-    required this.hoverIndex,
+    required this.marketBars,
+    required this.activeIndicatorTypes,
+    required this.chartZoom,
+    required this.hoveredBarIndex,
   });
 
-  final List<MarketBar> bars;
-  final Set<IndicatorKind> activeIndicators;
-  final double zoom;
-  final int? hoverIndex;
+  final List<MarketBar> marketBars;
+  final Set<IndicatorType> activeIndicatorTypes;
+  final double chartZoom;
+  final int? hoveredBarIndex;
 
   static const ink = Color(0xff17191d);
   static const body = Color(0xff737881);
@@ -163,22 +99,22 @@ class _MarketChartPainter extends CustomPainter {
   static const violet = Color(0xff7457d6);
   static const blue = Color(0xff4285f4);
 
-  late int _start;
-  late int _visibleCount;
-  late double _chartLeft;
-  late double _chartWidth;
+  late int _firstVisibleBarIndex;
+  late int _visibleBarCount;
+  late double _plotLeft;
+  late double _plotWidth;
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (bars.isEmpty || size.width <= 10 || size.height <= 10) return;
+    if (marketBars.isEmpty || size.width <= 10 || size.height <= 10) return;
 
-    _visibleCount = math.min(bars.length, math.max(32, (bars.length / zoom).round())).toInt();
-    _start = math.max(0, bars.length - _visibleCount).toInt();
-    _chartLeft = 52;
-    _chartWidth = math.max(1.0, size.width - _chartLeft - 14).toDouble();
+    _visibleBarCount = math.min(marketBars.length, math.max(32, (marketBars.length / chartZoom).round())).toInt();
+    _firstVisibleBarIndex = math.max(0, marketBars.length - _visibleBarCount).toInt();
+    _plotLeft = 52;
+    _plotWidth = math.max(1.0, size.width - _plotLeft - 14).toDouble();
 
-    final panels = IndicatorKind.values
-        .where((kind) => activeIndicators.contains(kind) && !kind.isOverlay)
+    final panels = IndicatorType.values
+        .where((indicatorType) => activeIndicatorTypes.contains(indicatorType) && !indicatorType.isOverlay)
         .toList(growable: false);
     const top = 22.0;
     final bottomPadding = 24.0;
@@ -188,31 +124,31 @@ class _MarketChartPainter extends CustomPainter {
       170.0,
       available - panelHeight * panels.length - (panels.isEmpty ? 0 : 8),
     ).toDouble();
-    final priceRect = Rect.fromLTWH(_chartLeft, top, _chartWidth, priceHeight);
+    final priceRect = Rect.fromLTWH(_plotLeft, top, _plotWidth, priceHeight);
 
-    final closes = bars.map((bar) => bar.close).toList(growable: false);
-    final trendFast = IndicatorCalculator.ema(closes, 21);
-    final trendSlow = IndicatorCalculator.ema(closes, 55);
-    final bollinger = IndicatorCalculator.bollinger(closes, 20, 2);
+    final closingPrices = marketBars.map((bar) => bar.close).toList(growable: false);
+    final fastTrendLine = TechnicalIndicatorCalculator.ema(closingPrices, 21);
+    final slowTrendLine = TechnicalIndicatorCalculator.ema(closingPrices, 55);
+    final bollingerBands = TechnicalIndicatorCalculator.bollingerBands(closingPrices, 20, 2);
 
-    _drawPriceChart(canvas, priceRect, closes, trendFast, trendSlow, bollinger);
+    _drawPriceChart(canvas, priceRect, closingPrices, fastTrendLine, slowTrendLine, bollingerBands);
 
     for (var index = 0; index < panels.length; index++) {
       final panelTop = priceRect.bottom + 8 + panelHeight * index;
-      final rect = Rect.fromLTWH(_chartLeft, panelTop, _chartWidth, panelHeight - 4);
-      _drawIndicatorPanel(canvas, rect, panels[index], closes);
+      final rect = Rect.fromLTWH(_plotLeft, panelTop, _plotWidth, panelHeight - 4);
+      _drawIndicatorPanel(canvas, rect, panels[index], closingPrices);
     }
   }
 
   void _drawPriceChart(
     Canvas canvas,
     Rect rect,
-    List<double> closes,
-    List<double?> trendFast,
-    List<double?> trendSlow,
-    BollingerData bollinger,
+    List<double> closingPrices,
+    List<double?> fastTrendLine,
+    List<double?> slowTrendLine,
+    BollingerBandsData bollingerBands,
   ) {
-    final visibleBars = bars.sublist(_start);
+    final visibleBars = marketBars.sublist(_firstVisibleBarIndex);
     var minPrice = visibleBars.map((bar) => bar.low).reduce((a, b) => math.min(a, b).toDouble());
     var maxPrice = visibleBars.map((bar) => bar.high).reduce((a, b) => math.max(a, b).toDouble());
     final padding = (maxPrice - minPrice) * 0.08;
@@ -223,7 +159,7 @@ class _MarketChartPainter extends CustomPainter {
     final volumeHeight = math.min(42.0, rect.height * 0.16).toDouble();
     final plotTop = rect.top + 12;
     final plotBottom = rect.bottom - volumeHeight - 12;
-    final candleWidth = math.max(2.0, math.min(11.0, _chartWidth / _visibleCount * 0.66)).toDouble();
+    final candleWidth = math.max(2.0, math.min(11.0, _plotWidth / _visibleBarCount * 0.66)).toDouble();
     double y(double value) =>
         plotBottom - (value - minPrice) / (maxPrice - minPrice) * (plotBottom - plotTop);
 
@@ -254,37 +190,37 @@ class _MarketChartPainter extends CustomPainter {
       );
     }
 
-    if (activeIndicators.contains(IndicatorKind.trendRibbon)) {
-      _drawSeries(canvas, trendFast, y, green, width: 1.7);
-      _drawSeries(canvas, trendSlow, y, violet, width: 1.35);
+    if (activeIndicatorTypes.contains(IndicatorType.trendRibbon)) {
+      _drawSeries(canvas, fastTrendLine, y, green, width: 1.7);
+      _drawSeries(canvas, slowTrendLine, y, violet, width: 1.35);
     }
-    if (activeIndicators.contains(IndicatorKind.bollingerSqueeze)) {
-      _drawSeries(canvas, bollinger.upper, y, blue.withValues(alpha: 0.72), width: 1);
-      _drawSeries(canvas, bollinger.middle, y, muted, width: 1);
-      _drawSeries(canvas, bollinger.lower, y, blue.withValues(alpha: 0.72), width: 1);
+    if (activeIndicatorTypes.contains(IndicatorType.bollingerSqueeze)) {
+      _drawSeries(canvas, bollingerBands.upper, y, blue.withValues(alpha: 0.72), width: 1);
+      _drawSeries(canvas, bollingerBands.middle, y, muted, width: 1);
+      _drawSeries(canvas, bollingerBands.lower, y, blue.withValues(alpha: 0.72), width: 1);
     }
 
-    final last = bars.last;
+    final last = marketBars.last;
     final lastY = y(last.close);
     final currentLine = Paint()
       ..color = green.withValues(alpha: 0.55)
       ..strokeWidth = 1;
-    canvas.drawLine(Offset(_chartLeft, lastY), Offset(_chartLeft + _chartWidth, lastY), currentLine);
+    canvas.drawLine(Offset(_plotLeft, lastY), Offset(_plotLeft + _plotWidth, lastY), currentLine);
     _text(canvas, _formatValue(last.close), Offset(rect.right - 48, lastY - 15),
         size: 9, color: ink, weight: FontWeight.w700);
     _text(canvas, 'PRICE / VOLUME', Offset(rect.left, rect.top - 16), size: 10, color: body,
         weight: FontWeight.w700);
     _drawTimeLabels(canvas, rect);
 
-    if (hoverIndex != null && hoverIndex! >= _start && hoverIndex! < bars.length) {
-      final local = hoverIndex! - _start;
+    if (hoveredBarIndex != null && hoveredBarIndex! >= _firstVisibleBarIndex && hoveredBarIndex! < marketBars.length) {
+      final local = hoveredBarIndex! - _firstVisibleBarIndex;
       final x = _xForLocal(local);
       final crosshair = Paint()
         ..color = ink.withValues(alpha: 0.2)
         ..strokeWidth = 1;
       canvas.drawLine(Offset(x, rect.top), Offset(x, rect.bottom), crosshair);
-      final bar = bars[hoverIndex!];
-      final tooltipText = '${_dateLabel(bar.time)}  ${_formatValue(bar.close)}';
+      final bar = marketBars[hoveredBarIndex!];
+      final tooltipText = '${_formatBarDate(bar.timestamp)}  ${_formatValue(bar.close)}';
       final tooltipWidth = 154.0;
       final tooltipX = (x + 8 + tooltipWidth > rect.right) ? x - tooltipWidth - 8 : x + 8;
       canvas.drawRect(
@@ -301,7 +237,7 @@ class _MarketChartPainter extends CustomPainter {
     }
   }
 
-  void _drawIndicatorPanel(Canvas canvas, Rect rect, IndicatorKind kind, List<double> closes) {
+  void _drawIndicatorPanel(Canvas canvas, Rect rect, IndicatorType indicatorType, List<double> closingPrices) {
     canvas.drawRect(rect, Paint()..color = const Color(0xfffafbfb));
     canvas.drawRect(
       rect,
@@ -309,33 +245,33 @@ class _MarketChartPainter extends CustomPainter {
         ..color = grid
         ..style = PaintingStyle.stroke,
     );
-    _text(canvas, kind.shortLabel, Offset(rect.left + 6, rect.top + 4),
+    _text(canvas, indicatorType.shortName, Offset(rect.left + 6, rect.top + 4),
         size: 9, color: body, weight: FontWeight.w700);
 
-    final first = switch (kind) {
-      IndicatorKind.rsiPulse => IndicatorCalculator.rsi(closes, 14),
-      IndicatorKind.macdMomentum => IndicatorCalculator.macd(closes).primary,
-      IndicatorKind.volumePressure => IndicatorCalculator.volumePressure(bars),
-      IndicatorKind.smartFlow => IndicatorCalculator.smartFlow(bars).primary,
+    final first = switch (indicatorType) {
+      IndicatorType.rsiPulse => TechnicalIndicatorCalculator.rsi(closingPrices, 14),
+      IndicatorType.macdMomentum => TechnicalIndicatorCalculator.macd(closingPrices).primary,
+      IndicatorType.volumePressure => TechnicalIndicatorCalculator.volumePressure(marketBars),
+      IndicatorType.smartFlow => TechnicalIndicatorCalculator.smartFlow(marketBars).primary,
       _ => const <double?>[],
     };
-    final second = switch (kind) {
-      IndicatorKind.rsiPulse => IndicatorCalculator.ema(
-          IndicatorCalculator.rsi(closes, 14).map((value) => value ?? 50).toList(), 5),
-      IndicatorKind.macdMomentum => IndicatorCalculator.macd(closes).secondary,
-      IndicatorKind.smartFlow => IndicatorCalculator.smartFlow(bars).secondary,
+    final second = switch (indicatorType) {
+      IndicatorType.rsiPulse => TechnicalIndicatorCalculator.ema(
+          TechnicalIndicatorCalculator.rsi(closingPrices, 14).map((value) => value ?? 50).toList(), 5),
+      IndicatorType.macdMomentum => TechnicalIndicatorCalculator.macd(closingPrices).secondary,
+      IndicatorType.smartFlow => TechnicalIndicatorCalculator.smartFlow(marketBars).secondary,
       _ => const <double?>[],
     };
-    final third = kind == IndicatorKind.macdMomentum
-        ? IndicatorCalculator.macd(closes).tertiary
+    final third = indicatorType == IndicatorType.macdMomentum
+        ? TechnicalIndicatorCalculator.macd(closingPrices).tertiary
         : const <double?>[];
 
     var minValue = -1.0;
     var maxValue = 1.0;
-    if (kind == IndicatorKind.rsiPulse) {
+    if (indicatorType == IndicatorType.rsiPulse) {
       minValue = 0;
       maxValue = 100;
-    } else if (kind == IndicatorKind.volumePressure || kind == IndicatorKind.smartFlow) {
+    } else if (indicatorType == IndicatorType.volumePressure || indicatorType == IndicatorType.smartFlow) {
       minValue = -100;
       maxValue = 100;
     } else {
@@ -356,17 +292,17 @@ class _MarketChartPainter extends CustomPainter {
     double y(double value) =>
         rect.bottom - 8 - (value - minValue) / (maxValue - minValue) * (rect.height - 25);
 
-    if (kind == IndicatorKind.rsiPulse) {
+    if (indicatorType == IndicatorType.rsiPulse) {
       _drawReference(canvas, rect, y(70), violet.withValues(alpha: 0.4));
       _drawReference(canvas, rect, y(30), violet.withValues(alpha: 0.4));
     } else {
       _drawReference(canvas, rect, y(0), grid);
     }
-    _drawSeries(canvas, first, y, kind == IndicatorKind.rsiPulse ? violet : green, width: 1.5);
+    _drawSeries(canvas, first, y, indicatorType == IndicatorType.rsiPulse ? violet : green, width: 1.5);
     if (second.isNotEmpty) {
-      _drawSeries(canvas, second, y, kind == IndicatorKind.smartFlow ? blue : ink, width: 1);
+      _drawSeries(canvas, second, y, indicatorType == IndicatorType.smartFlow ? blue : ink, width: 1);
     }
-    if (kind == IndicatorKind.macdMomentum) {
+    if (indicatorType == IndicatorType.macdMomentum) {
       _drawHistogram(canvas, third, y, rect, green, red);
     }
   }
@@ -380,11 +316,11 @@ class _MarketChartPainter extends CustomPainter {
     Color negative,
   ) {
     final zero = y(0);
-    for (var local = 0; local < _visibleCount; local++) {
-      final value = values[_start + local];
+    for (var local = 0; local < _visibleBarCount; local++) {
+      final value = values[_firstVisibleBarIndex + local];
       if (value == null) continue;
       final x = _xForLocal(local);
-      final nextX = local + 1 < _visibleCount ? _xForLocal(local + 1) : x + 3;
+      final nextX = local + 1 < _visibleBarCount ? _xForLocal(local + 1) : x + 3;
       canvas.drawRect(
         Rect.fromLTRB(
           x - 2,
@@ -423,8 +359,8 @@ class _MarketChartPainter extends CustomPainter {
   }) {
     if (values.isEmpty) return;
     Path? path;
-    for (var local = 0; local < _visibleCount; local++) {
-      final value = values[_start + local];
+    for (var local = 0; local < _visibleBarCount; local++) {
+      final value = values[_firstVisibleBarIndex + local];
       if (value == null) {
         if (path != null) {
           canvas.drawPath(
@@ -458,14 +394,14 @@ class _MarketChartPainter extends CustomPainter {
 
   void _drawTimeLabels(Canvas canvas, Rect rect) {
     for (var mark = 0; mark < 4; mark++) {
-      final local = ((_visibleCount - 1) * mark / 3).round();
+      final local = ((_visibleBarCount - 1) * mark / 3).round();
       final x = _xForLocal(local);
-      _text(canvas, _dateLabel(bars[_start + local].time), Offset(x - 22, rect.bottom + 4), size: 8, color: muted);
+      _text(canvas, _formatBarDate(marketBars[_firstVisibleBarIndex + local].timestamp), Offset(x - 22, rect.bottom + 4), size: 8, color: muted);
     }
   }
 
   double _xForLocal(int local) =>
-      _chartLeft + (_visibleCount <= 1 ? 0 : local / (_visibleCount - 1) * _chartWidth);
+      _plotLeft + (_visibleBarCount <= 1 ? 0 : local / (_visibleBarCount - 1) * _plotWidth);
 
   void _text(
     Canvas canvas,
@@ -490,14 +426,14 @@ class _MarketChartPainter extends CustomPainter {
     painter.paint(canvas, offset);
   }
 
-  String _dateLabel(DateTime value) => '${value.month.toString().padLeft(2, '0')}/${value.day.toString().padLeft(2, '0')}';
+  String _formatBarDate(DateTime value) => '${value.month.toString().padLeft(2, '0')}/${value.day.toString().padLeft(2, '0')}';
 
   String _formatValue(double value) => value.abs() >= 1000 ? value.toStringAsFixed(0) : value.toStringAsFixed(2);
 
   @override
   bool shouldRepaint(covariant _MarketChartPainter oldDelegate) =>
-      oldDelegate.bars != bars ||
-      oldDelegate.activeIndicators != activeIndicators ||
-      oldDelegate.zoom != zoom ||
-      oldDelegate.hoverIndex != hoverIndex;
+      oldDelegate.marketBars != marketBars ||
+      oldDelegate.activeIndicatorTypes != activeIndicatorTypes ||
+      oldDelegate.chartZoom != chartZoom ||
+      oldDelegate.hoveredBarIndex != hoveredBarIndex;
 }

@@ -1,7 +1,7 @@
-import '../models/market_data.dart';
+import '../entities/market_bar.dart';
 
-class IndicatorData {
-  const IndicatorData({
+class CalculatedIndicatorSeries {
+  const CalculatedIndicatorSeries({
     required this.primary,
     this.secondary = const <double?>[],
     this.tertiary = const <double?>[],
@@ -12,17 +12,17 @@ class IndicatorData {
   final List<double?> tertiary;
 }
 
-class BollingerData {
-  const BollingerData({required this.middle, required this.upper, required this.lower});
+class BollingerBandsData {
+  const BollingerBandsData({required this.middle, required this.upper, required this.lower});
 
   final List<double?> middle;
   final List<double?> upper;
   final List<double?> lower;
 }
 
-class IndicatorCalculator {
-  static List<double?> closes(List<MarketBar> bars) =>
-      bars.map((bar) => bar.close).toList(growable: false);
+class TechnicalIndicatorCalculator {
+  static List<double?> closingPrices(List<MarketBar> marketBars) =>
+      marketBars.map((bar) => bar.close).toList(growable: false);
 
   static List<double?> ema(List<double> values, int period) {
     final output = List<double?>.filled(values.length, null);
@@ -82,7 +82,7 @@ class IndicatorCalculator {
     return 100 - 100 / (1 + gain / loss);
   }
 
-  static IndicatorData macd(List<double> values) {
+  static CalculatedIndicatorSeries macd(List<double> values) {
     final fast = ema(values, 12);
     final slow = ema(values, 26);
     final line = List<double?>.generate(
@@ -98,10 +98,10 @@ class IndicatorCalculator {
           ? null
           : line[index]! - signal[index]!,
     );
-    return IndicatorData(primary: line, secondary: signal, tertiary: histogram);
+    return CalculatedIndicatorSeries(primary: line, secondary: signal, tertiary: histogram);
   }
 
-  static BollingerData bollinger(List<double> values, int period, double multiplier) {
+  static BollingerBandsData bollingerBands(List<double> values, int period, double multiplier) {
     final middle = sma(values, period);
     final upper = List<double?>.filled(values.length, null);
     final lower = List<double?>.filled(values.length, null);
@@ -117,17 +117,17 @@ class IndicatorCalculator {
       upper[index] = mean + deviation * multiplier;
       lower[index] = mean - deviation * multiplier;
     }
-    return BollingerData(middle: middle, upper: upper, lower: lower);
+    return BollingerBandsData(middle: middle, upper: upper, lower: lower);
   }
 
-  static List<double?> volumePressure(List<MarketBar> bars) {
-    final output = List<double?>.filled(bars.length, null);
+  static List<double?> volumePressure(List<MarketBar> marketBars) {
+    final output = List<double?>.filled(marketBars.length, null);
     const period = 14;
-    for (var index = period - 1; index < bars.length; index++) {
+    for (var index = period - 1; index < marketBars.length; index++) {
       var pressure = 0.0;
       var volume = 0.0;
       for (var offset = 0; offset < period; offset++) {
-        final bar = bars[index - offset];
+        final bar = marketBars[index - offset];
         final range = bar.high - bar.low;
         pressure += range == 0 ? 0 : (bar.close - bar.open) / range * bar.volume;
         volume += bar.volume;
@@ -137,16 +137,16 @@ class IndicatorCalculator {
     return output;
   }
 
-  static IndicatorData smartFlow(List<MarketBar> bars) {
-    final flow = List<double?>.filled(bars.length, null);
-    final volumeZ = List<double?>.filled(bars.length, null);
+  static CalculatedIndicatorSeries smartFlow(List<MarketBar> marketBars) {
+    final flow = List<double?>.filled(marketBars.length, null);
+    final volumeZ = List<double?>.filled(marketBars.length, null);
     const period = 20;
-    for (var index = period - 1; index < bars.length; index++) {
+    for (var index = period - 1; index < marketBars.length; index++) {
       var signedVolume = 0.0;
       var totalVolume = 0.0;
       var meanVolume = 0.0;
       for (var offset = 0; offset < period; offset++) {
-        final bar = bars[index - offset];
+        final bar = marketBars[index - offset];
         signedVolume += (bar.close >= bar.open ? 1 : -1) * bar.volume;
         totalVolume += bar.volume;
         meanVolume += bar.volume;
@@ -154,16 +154,16 @@ class IndicatorCalculator {
       meanVolume /= period;
       var variance = 0.0;
       for (var offset = 0; offset < period; offset++) {
-        final difference = bars[index - offset].volume - meanVolume;
+        final difference = marketBars[index - offset].volume - meanVolume;
         variance += difference * difference;
       }
       final deviation = (variance / period).sqrt();
       flow[index] = totalVolume == 0 ? 0 : signedVolume / totalVolume * 100;
       volumeZ[index] = deviation == 0
           ? 0
-          : ((bars[index].volume - meanVolume) / deviation).clamp(-3, 3).toDouble();
+          : ((marketBars[index].volume - meanVolume) / deviation).clamp(-3, 3).toDouble();
     }
-    return IndicatorData(primary: flow, secondary: volumeZ);
+    return CalculatedIndicatorSeries(primary: flow, secondary: volumeZ);
   }
 }
 

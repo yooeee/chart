@@ -54,3 +54,14 @@ API 키는 저장소에 커밋하지 않습니다. GitHub Actions APK 빌드는 
 - TradingView Advanced Chart widget: https://www.tradingview.com/widget-docs/widgets/charts/advanced-chart/
 - TradingView 위젯은 TradingView의 제공 조건과 거래소 데이터 지연 정책을 따릅니다.
 - 투자 판단을 위한 신호가 아니라 UI와 차트 연동을 검증하기 위한 앱입니다.
+
+
+## 프로젝트 구조
+
+- `features/chart/domain`: 시장 엔티티, Repository 계약, UseCase, 순수 지표 계산
+- `features/chart/data`: Twelve Data 원격 데이터소스, 응답 모델, Repository 구현
+- `features/chart/presentation`: 차트 페이지, Controller, 화면 위젯
+- `features/landing`: 소개 페이지와 TradingView 화면
+- `core` 및 `app`: 공통 색상과 앱 구성
+
+화면 계층은 UseCase와 도메인 계약만 참조하고, API 구현체는 Data 계층에 격리되어 있습니다.

@@ -1,50 +1,8 @@
-import 'dart:math' as math;
-
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-import 'widgets/tradingview_chart.dart';
-
-class TradingViewMarket {
-  const TradingViewMarket({
-    required this.ticker,
-    required this.name,
-    required this.exchange,
-    required this.tradingViewSymbol,
-  });
-
-  final String ticker;
-  final String name;
-  final String exchange;
-  final String tradingViewSymbol;
-
-  static const markets = <TradingViewMarket>[
-    TradingViewMarket(
-      ticker: 'BTCUSD',
-      name: 'Bitcoin',
-      exchange: 'BINANCE',
-      tradingViewSymbol: 'BINANCE:BTCUSDT',
-    ),
-    TradingViewMarket(
-      ticker: 'ETHUSD',
-      name: 'Ethereum',
-      exchange: 'BINANCE',
-      tradingViewSymbol: 'BINANCE:ETHUSDT',
-    ),
-    TradingViewMarket(
-      ticker: 'SAMSUNG',
-      name: '삼성전자 추종 선물',
-      exchange: 'BINANCE FUTURES',
-      tradingViewSymbol: 'BINANCE:SAMSUNGUSDT.P',
-    ),
-    TradingViewMarket(
-      ticker: 'SKHYNIX',
-      name: 'SK하이닉스 추종 선물',
-      exchange: 'BINANCE FUTURES',
-      tradingViewSymbol: 'BINANCE:SKHYNIXUSDT.P',
-    ),
-  ];
-}
+import '../../../../core/theme/app_colors.dart';
+import '../../domain/entities/trading_view_market.dart';
+import '../../../chart/presentation/widgets/tradingview_chart.dart';
 
 class TradingViewWorkspacePage extends StatefulWidget {
   const TradingViewWorkspacePage({super.key});
@@ -55,28 +13,28 @@ class TradingViewWorkspacePage extends StatefulWidget {
 
 class _TradingViewWorkspacePageState extends State<TradingViewWorkspacePage> {
   TradingViewMarket _selectedMarket = TradingViewMarket.markets.first;
-  bool _showIntroduction = true;
+  bool _isIntroductionVisible = true;
 
   void _selectMarket(TradingViewMarket market) {
     setState(() => _selectedMarket = market);
   }
 
-  void _showIntro() {
-    setState(() => _showIntroduction = true);
+  void _showIntroduction() {
+    setState(() => _isIntroductionVisible = true);
   }
 
   void _showChart() {
-    setState(() => _showIntroduction = false);
+    setState(() => _isIntroductionVisible = false);
   }
 
-  void _showIndicatorNotice(String indicatorName) {
+  void _showIndicatorPreparationNotice(String indicatorName) {
     final messenger = ScaffoldMessenger.of(context);
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           behavior: SnackBarBehavior.floating,
-          backgroundColor: _TradingViewPalette.ink,
+          backgroundColor: AppColors.ink,
           margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           duration: const Duration(seconds: 2),
@@ -86,7 +44,7 @@ class _TradingViewWorkspacePageState extends State<TradingViewWorkspacePage> {
                 width: 7,
                 height: 7,
                 decoration: const BoxDecoration(
-                  color: _TradingViewPalette.green,
+                  color: AppColors.green,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -105,7 +63,7 @@ class _TradingViewWorkspacePageState extends State<TradingViewWorkspacePage> {
           ),
           action: SnackBarAction(
             label: '확인',
-            textColor: _TradingViewPalette.green,
+            textColor: AppColors.green,
             onPressed: () {},
           ),
         ),
@@ -115,22 +73,22 @@ class _TradingViewWorkspacePageState extends State<TradingViewWorkspacePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _TradingViewPalette.canvas,
+      backgroundColor: AppColors.canvas,
       body: SafeArea(
         child: Column(
           children: [
             _TradingViewTopNavigation(
-              showIntroduction: _showIntroduction,
-              onIntroductionSelected: _showIntro,
+              showIntroduction: _isIntroductionVisible,
+              onIntroductionSelected: _showIntroduction,
               onChartSelected: _showChart,
             ),
             Expanded(
-              child: _showIntroduction
+              child: _isIntroductionVisible
                   ? _TradingViewIntroductionPage(onOpenChart: _showChart)
                   : _TradingViewChartPage(
                       market: _selectedMarket,
                       onMarketChanged: _selectMarket,
-                      onIndicatorSelected: _showIndicatorNotice,
+                      onIndicatorSelected: _showIndicatorPreparationNotice,
                     ),
             ),
           ],
@@ -190,7 +148,7 @@ class _TradingViewChartPage extends StatelessWidget {
   }
 }
 
-class _TradingViewPalette {
+class AppColors {
   static const green = Color(0xff00de5a);
   static const ink = Color(0xff17191d);
   static const body = Color(0xff737881);
@@ -218,7 +176,7 @@ class _TradingViewTopNavigation extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: _TradingViewPalette.border)),
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -227,7 +185,7 @@ class _TradingViewTopNavigation extends StatelessWidget {
             children: [
               if (compact)
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.menu_rounded, color: _TradingViewPalette.ink),
+                  icon: const Icon(Icons.menu_rounded, color: AppColors.ink),
                   onSelected: (value) {
                     if (value == 'intro') {
                       onIntroductionSelected();
@@ -256,7 +214,7 @@ class _TradingViewTopNavigation extends StatelessWidget {
               ],
               const Spacer(),
               if (!compact) ...[
-                const Icon(Icons.notifications_none_rounded, size: 20, color: _TradingViewPalette.body),
+                const Icon(Icons.notifications_none_rounded, size: 20, color: AppColors.body),
                 const SizedBox(width: 18),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
@@ -264,9 +222,9 @@ class _TradingViewTopNavigation extends StatelessWidget {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      SizedBox(width: 6, height: 6, child: DecoratedBox(decoration: BoxDecoration(color: _TradingViewPalette.green, shape: BoxShape.circle))),
+                      SizedBox(width: 6, height: 6, child: DecoratedBox(decoration: BoxDecoration(color: AppColors.green, shape: BoxShape.circle))),
                       SizedBox(width: 6),
-                      Text('LIVE MARKET', style: TextStyle(color: _TradingViewPalette.label, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .6)),
+                      Text('LIVE MARKET', style: TextStyle(color: AppColors.label, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .6)),
                     ],
                   ),
                 ),
@@ -276,7 +234,7 @@ class _TradingViewTopNavigation extends StatelessWidget {
                 width: 32,
                 height: 32,
                 alignment: Alignment.center,
-                color: _TradingViewPalette.ink,
+                color: AppColors.ink,
                 child: const Text('YE', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
               ),
             ],
@@ -298,13 +256,13 @@ class _TradingViewBrandMark extends StatelessWidget {
         Container(
           width: 26,
           height: 26,
-          color: _TradingViewPalette.green,
+          color: AppColors.green,
           child: const Icon(Icons.bolt_rounded, color: Colors.black, size: 18),
         ),
         const SizedBox(width: 9),
-        const Text('PULSE', style: TextStyle(color: _TradingViewPalette.ink, fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 1.6)),
+        const Text('PULSE', style: TextStyle(color: AppColors.ink, fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 1.6)),
         const SizedBox(width: 6),
-        const Text('MARKET LAB', style: TextStyle(color: _TradingViewPalette.muted, fontSize: 9, letterSpacing: 1.1)),
+        const Text('MARKET LAB', style: TextStyle(color: AppColors.muted, fontSize: 9, letterSpacing: 1.1)),
       ],
     );
   }
@@ -330,12 +288,12 @@ class _TradingViewNavItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: active ? _TradingViewPalette.green : Colors.transparent, width: 3)),
+          border: Border(bottom: BorderSide(color: active ? AppColors.green : Colors.transparent, width: 3)),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: active ? _TradingViewPalette.ink : _TradingViewPalette.body,
+            color: active ? AppColors.ink : AppColors.body,
             fontSize: 14,
             fontWeight: active ? FontWeight.w700 : FontWeight.w400,
           ),
@@ -374,7 +332,7 @@ class _TradingViewWorkspaceHeader extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
                     market.exchange,
-                    style: const TextStyle(color: _TradingViewPalette.muted, fontSize: 11),
+                    style: const TextStyle(color: AppColors.muted, fontSize: 11),
                   ),
                 ),
               ],
@@ -386,12 +344,12 @@ class _TradingViewWorkspaceHeader extends StatelessWidget {
                 children: [
                   Text(
                     'LIVE MARKET DATA',
-                    style: TextStyle(color: _TradingViewPalette.ink, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -.5),
+                    style: TextStyle(color: AppColors.ink, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -.5),
                   ),
                   SizedBox(height: 4),
                   Text(
                     'TradingView Advanced Chart',
-                    style: TextStyle(color: _TradingViewPalette.body, fontSize: 11),
+                    style: TextStyle(color: AppColors.body, fontSize: 11),
                   ),
                 ],
               )
@@ -400,12 +358,12 @@ class _TradingViewWorkspaceHeader extends StatelessWidget {
                 children: [
                   Text(
                     'LIVE MARKET DATA',
-                    style: TextStyle(color: _TradingViewPalette.ink, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -.6),
+                    style: TextStyle(color: AppColors.ink, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -.6),
                   ),
                   SizedBox(width: 12),
                   Text(
                     'TradingView Advanced Chart',
-                    style: TextStyle(color: _TradingViewPalette.body, fontSize: 12),
+                    style: TextStyle(color: AppColors.body, fontSize: 12),
                   ),
                 ],
               ),
@@ -434,16 +392,16 @@ class _TradingViewMarketSelector extends StatelessWidget {
             (item) => PopupMenuItem<TradingViewMarket>(
               value: item,
               height: 40,
-              child: Text('${item.ticker}  ·  ${item.name}', style: const TextStyle(color: _TradingViewPalette.ink, fontSize: 13)),
+              child: Text('${item.ticker}  ·  ${item.name}', style: const TextStyle(color: AppColors.ink, fontSize: 13)),
             ),
           )
           .toList(),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(market.ticker, style: const TextStyle(color: _TradingViewPalette.ink, fontSize: 20, fontWeight: FontWeight.w800)),
+          Text(market.ticker, style: const TextStyle(color: AppColors.ink, fontSize: 20, fontWeight: FontWeight.w800)),
           const SizedBox(width: 4),
-          const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: _TradingViewPalette.body),
+          const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: AppColors.body),
         ],
       ),
     );
@@ -460,17 +418,17 @@ class _TradingViewMarketStrip extends StatelessWidget {
     return Container(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: _TradingViewPalette.border)),
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.border)),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         child: Row(
           children: [
-            const Text('MARKET DATA', style: TextStyle(color: _TradingViewPalette.muted, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .8)),
+            const Text('MARKET DATA', style: TextStyle(color: AppColors.muted, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .8)),
             const SizedBox(width: 18),
             _item('SYMBOL', market.tradingViewSymbol),
             _item('SOURCE', 'TRADINGVIEW'),
-            const Text('실시간 차트는 거래소별 지연 정책이 적용될 수 있습니다.', style: TextStyle(color: _TradingViewPalette.muted, fontSize: 9)),
+            const Text('실시간 차트는 거래소별 지연 정책이 적용될 수 있습니다.', style: TextStyle(color: AppColors.muted, fontSize: 9)),
           ],
         ),
       ),
@@ -483,8 +441,8 @@ class _TradingViewMarketStrip extends StatelessWidget {
       child: RichText(
         text: TextSpan(
           children: [
-            TextSpan(text: '$label  ', style: const TextStyle(color: _TradingViewPalette.body, fontSize: 10)),
-            TextSpan(text: value, style: const TextStyle(color: _TradingViewPalette.ink, fontSize: 10, fontWeight: FontWeight.w700)),
+            TextSpan(text: '$label  ', style: const TextStyle(color: AppColors.body, fontSize: 10)),
+            TextSpan(text: value, style: const TextStyle(color: AppColors.ink, fontSize: 10, fontWeight: FontWeight.w700)),
           ],
         ),
       ),
@@ -505,7 +463,7 @@ class _TradingViewIndicatorToolbar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: _TradingViewPalette.border),
+        border: Border.all(color: AppColors.border),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -518,13 +476,13 @@ class _TradingViewIndicatorToolbar extends StatelessWidget {
                   Container(
                     width: 7,
                     height: 7,
-                    color: _TradingViewPalette.green,
+                    color: AppColors.green,
                   ),
                   const SizedBox(width: 8),
                   const Text(
                     'SIGNAL LAYER',
                     style: TextStyle(
-                      color: _TradingViewPalette.ink,
+                      color: AppColors.ink,
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
                       letterSpacing: .8,
@@ -536,7 +494,7 @@ class _TradingViewIndicatorToolbar extends StatelessWidget {
                       compact ? '보조지표 선택' : '보조지표를 선택해 차트 분석 레이어를 확장하세요.',
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: _TradingViewPalette.body,
+                        color: AppColors.body,
                         fontSize: 10,
                       ),
                     ),
@@ -545,7 +503,7 @@ class _TradingViewIndicatorToolbar extends StatelessWidget {
                     const Text(
                       '6 SIGNALS / IN DEVELOPMENT',
                       style: TextStyle(
-                        color: _TradingViewPalette.muted,
+                        color: AppColors.muted,
                         fontSize: 8,
                         fontWeight: FontWeight.w800,
                         letterSpacing: .65,
@@ -601,7 +559,7 @@ class _TradingViewIndicatorChip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
           decoration: BoxDecoration(
-            border: Border.all(color: _TradingViewPalette.border),
+            border: Border.all(color: AppColors.border),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -615,7 +573,7 @@ class _TradingViewIndicatorChip extends StatelessWidget {
               Text(
                 data.title,
                 style: const TextStyle(
-                  color: _TradingViewPalette.ink,
+                  color: AppColors.ink,
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                 ),
@@ -624,13 +582,13 @@ class _TradingViewIndicatorChip extends StatelessWidget {
               const Icon(
                 Icons.schedule_rounded,
                 size: 13,
-                color: _TradingViewPalette.muted,
+                color: AppColors.muted,
               ),
               const SizedBox(width: 4),
               const Text(
                 '준비 중',
                 style: TextStyle(
-                  color: _TradingViewPalette.muted,
+                  color: AppColors.muted,
                   fontSize: 8,
                   fontWeight: FontWeight.w800,
                 ),
@@ -666,7 +624,7 @@ class _TradingViewIntroductionPageState
       reading:
           '두 평균선의 기울기와 간격이 같은 방향으로 움직이는지 먼저 확인합니다.',
       mode: 0,
-      accent: _TradingViewPalette.green,
+      accent: AppColors.green,
     ),
     _TradingViewStudyPreviewData(
       category: 'MOMENTUM / OSCILLATOR',
@@ -963,8 +921,8 @@ class _TradingViewSceneRail extends StatelessWidget {
   ];
 
   static const _colors = <Color>[
-    _TradingViewPalette.green,
-    _TradingViewPalette.green,
+    AppColors.green,
+    AppColors.green,
     Color(0xff9d8cff),
     Color(0xff7eafff),
     Color(0xff62b5ff),
@@ -1109,7 +1067,7 @@ class _TradingViewScrollIntroHero extends StatelessWidget {
         final terminalWidth = math.min(392.0, constraints.maxWidth * .36);
 
         return Container(
-          color: _TradingViewPalette.ink,
+          color: AppColors.ink,
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -1277,7 +1235,7 @@ class _TradingViewScrollHeroCopy extends StatelessWidget {
           icon: const Icon(Icons.arrow_outward_rounded, size: 16),
           label: const Text('워크스페이스 열기'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: _TradingViewPalette.green,
+            backgroundColor: AppColors.green,
             foregroundColor: Colors.black,
             elevation: 0,
             padding: EdgeInsets.symmetric(
@@ -1341,7 +1299,7 @@ class _TradingViewScrollSignalTerminal extends StatelessWidget {
             child: Text(
               'STUDY INDEX',
               style: TextStyle(
-                color: _TradingViewPalette.green,
+                color: AppColors.green,
                 fontSize: 8,
                 fontWeight: FontWeight.w800,
                 letterSpacing: .7,
@@ -1358,7 +1316,7 @@ class _TradingViewScrollSignalTerminal extends StatelessWidget {
               children: [
                 _TradingViewScrollSignalTag(
                   label: 'TREND',
-                  color: _TradingViewPalette.green,
+                  color: AppColors.green,
                 ),
                 _TradingViewScrollSignalTag(
                   label: 'MOMENTUM',
@@ -1482,7 +1440,7 @@ class _TradingViewScrollStudySlide extends StatelessWidget {
                   width: 320,
                   height: 320,
                   decoration: BoxDecoration(
-                    color: _TradingViewPalette.green.withValues(alpha: .025),
+                    color: AppColors.green.withValues(alpha: .025),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -1536,7 +1494,7 @@ class _TradingViewScrollStudySlide extends StatelessWidget {
                               ? 'LAST SIGNAL / OPEN CHART'
                               : 'SCROLL / NEXT SIGNAL',
                           style: const TextStyle(
-                            color: _TradingViewPalette.muted,
+                            color: AppColors.muted,
                             fontSize: 9,
                             fontWeight: FontWeight.w800,
                             letterSpacing: .8,
@@ -1549,7 +1507,7 @@ class _TradingViewScrollStudySlide extends StatelessWidget {
                               : Icons.south_rounded,
                           color: studyIndex == _TradingViewIntroductionPageState._studies.length - 1
                               ? data.accent
-                              : _TradingViewPalette.muted,
+                              : AppColors.muted,
                           size: 15,
                         ),
                       ],
@@ -1589,7 +1547,7 @@ class _TradingViewScrollStudyHeader extends StatelessWidget {
                 curve: Curves.easeOutCubic,
                 height: 4,
                 color: index == studyIndex
-                    ? _TradingViewPalette.green
+                    ? AppColors.green
                     : index < studyIndex
                         ? const Color(0x5500de5a)
                         : const Color(0xffdfe5e6),
@@ -1613,7 +1571,7 @@ class _TradingViewScrollStudyHeader extends StatelessWidget {
             Text(
               'ACTIVE SIGNAL',
               style: const TextStyle(
-                color: _TradingViewPalette.ink,
+                color: AppColors.ink,
                 fontSize: 9,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1,
@@ -1625,7 +1583,7 @@ class _TradingViewScrollStudyHeader extends StatelessWidget {
                 data.category,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: _TradingViewPalette.muted,
+                  color: AppColors.muted,
                   fontSize: 9,
                   fontWeight: FontWeight.w700,
                   letterSpacing: .75,
@@ -1636,7 +1594,7 @@ class _TradingViewScrollStudyHeader extends StatelessWidget {
             const Text(
               'FOCUS MODE',
               style: TextStyle(
-                color: _TradingViewPalette.green,
+                color: AppColors.green,
                 fontSize: 9,
                 fontWeight: FontWeight.w800,
                 letterSpacing: .8,
@@ -1690,7 +1648,7 @@ class _TradingViewScrollStudyCopy extends StatelessWidget {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: _TradingViewPalette.ink,
+            color: AppColors.ink,
             fontSize: titleSize,
             height: 1.05,
             fontWeight: FontWeight.w800,
@@ -1703,7 +1661,7 @@ class _TradingViewScrollStudyCopy extends StatelessWidget {
           maxLines: compact ? (short ? 2 : 3) : 4,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: _TradingViewPalette.body,
+            color: AppColors.body,
             fontSize: bodySize,
             height: 1.5,
           ),
@@ -1720,7 +1678,7 @@ class _TradingViewScrollStudyCopy extends StatelessWidget {
             children: [
               Icon(
                 Icons.tune_rounded,
-                color: _TradingViewPalette.label,
+                color: AppColors.label,
                 size: short ? 12 : 14,
               ),
               const SizedBox(width: 7),
@@ -1729,7 +1687,7 @@ class _TradingViewScrollStudyCopy extends StatelessWidget {
                   data.formula,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: _TradingViewPalette.label,
+                    color: AppColors.label,
                     fontSize: short ? 8 : 10,
                     fontWeight: FontWeight.w800,
                     letterSpacing: .35,
@@ -1743,7 +1701,7 @@ class _TradingViewScrollStudyCopy extends StatelessWidget {
         Text(
           'READING POINT',
           style: TextStyle(
-            color: _TradingViewPalette.green,
+            color: AppColors.green,
             fontSize: short ? 8 : 9,
             fontWeight: FontWeight.w800,
             letterSpacing: 1,
@@ -1755,7 +1713,7 @@ class _TradingViewScrollStudyCopy extends StatelessWidget {
           maxLines: compact ? (short ? 3 : 4) : 5,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: _TradingViewPalette.body,
+            color: AppColors.body,
             fontSize: short ? 10 : compact ? 11 : 12,
             height: 1.5,
           ),
@@ -1782,7 +1740,7 @@ class _TradingViewScrollStudyCopy extends StatelessWidget {
             const Text(
               'CONCEPT PREVIEW',
               style: TextStyle(
-                color: _TradingViewPalette.muted,
+                color: AppColors.muted,
                 fontSize: 8,
                 fontWeight: FontWeight.w700,
                 letterSpacing: .5,
@@ -1808,7 +1766,7 @@ class _TradingViewStudiesEyebrow extends StatelessWidget {
           height: 8,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: _TradingViewPalette.green,
+              color: AppColors.green,
               shape: BoxShape.circle,
             ),
           ),
@@ -1906,7 +1864,7 @@ class _TradingViewStudyHeroPainter extends CustomPainter {
     canvas.drawPath(
       line,
       Paint()
-        ..color = _TradingViewPalette.green
+        ..color = AppColors.green
         ..strokeWidth = mini ? 2 : 2.3
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
@@ -1924,7 +1882,7 @@ class _TradingViewStudyHeroPainter extends CustomPainter {
     canvas.drawCircle(
       Offset(scanX, size.height * .21),
       mini ? 3 : 4,
-      Paint()..color = _TradingViewPalette.green,
+      Paint()..color = AppColors.green,
     );
   }
 
@@ -1949,7 +1907,7 @@ class _TradingViewStudyVisual extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: _TradingViewPalette.ink,
+        color: AppColors.ink,
         border: Border.all(color: const Color(0xff2e3538)),
       ),
       child: Stack(
@@ -2113,7 +2071,7 @@ class _TradingViewStudyPreviewPainter extends CustomPainter {
       final low = math.max(open, close) + .045;
       final color = close <= open
           ? const Color(0xffff8b76)
-          : _TradingViewPalette.green;
+          : AppColors.green;
       final candle = Rect.fromLTRB(
         x - 4,
         math.min(open, close) * size.height,
@@ -2169,7 +2127,7 @@ class _TradingViewStudyPreviewPainter extends CustomPainter {
     canvas.drawPath(
       fast,
       Paint()
-        ..color = _TradingViewPalette.green
+        ..color = AppColors.green
         ..strokeWidth = 2.2
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round,
@@ -2515,7 +2473,7 @@ class _TradingViewChartCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: _TradingViewPalette.border),
+        border: Border.all(color: AppColors.border),
         boxShadow: const [
           BoxShadow(color: Color(0x0d000000), offset: Offset(0, 2), blurRadius: 8),
         ],
@@ -2530,7 +2488,7 @@ class _TradingViewChartCard extends StatelessWidget {
                   const Text(
                     'LIVE CHART',
                     style: TextStyle(
-                      color: _TradingViewPalette.label,
+                      color: AppColors.label,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       letterSpacing: .7,
@@ -2542,7 +2500,7 @@ class _TradingViewChartCard extends StatelessWidget {
                       market.tradingViewSymbol,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: _TradingViewPalette.muted,
+                        color: AppColors.muted,
                         fontSize: 10,
                       ),
                     ),
@@ -2552,13 +2510,13 @@ class _TradingViewChartCard extends StatelessWidget {
                     const Icon(
                       Icons.open_with_rounded,
                       size: 15,
-                      color: _TradingViewPalette.muted,
+                      color: AppColors.muted,
                     ),
                     const SizedBox(width: 6),
                     const Text(
                       'TradingView에서 시간봉 선택',
                       style: TextStyle(
-                        color: _TradingViewPalette.muted,
+                        color: AppColors.muted,
                         fontSize: 9,
                       ),
                     ),
