@@ -37,7 +37,11 @@ jobs:
         run: flutter pub get
 
       - name: Build Flutter Web
-        run: flutter build web --release --base-href "/chart/"
+        run: >-
+          flutter build web --release --base-href "/chart/"
+          --dart-define=PULSE_API_BASE_URL=${{ vars.PULSE_API_BASE_URL }}
+          --dart-define=GOOGLE_WEB_CLIENT_ID=${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          --dart-define=GOOGLE_SERVER_CLIENT_ID=${{ vars.GOOGLE_SERVER_CLIENT_ID }}
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

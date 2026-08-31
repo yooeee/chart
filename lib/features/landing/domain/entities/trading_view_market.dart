@@ -26,15 +26,70 @@ class TradingViewMarket {
     ),
     TradingViewMarket(
       ticker: 'SAMSUNG',
-      displayName: '삼성전자 추종 선물',
-      exchange: 'BINANCE FUTURES',
-      tradingViewSymbol: 'BINANCE:SAMSUNGUSDT.P',
+      displayName: '삼성전자',
+      exchange: 'KRX',
+      tradingViewSymbol: 'KRX:005930',
     ),
     TradingViewMarket(
       ticker: 'SKHYNIX',
-      displayName: 'SK하이닉스 추종 선물',
-      exchange: 'BINANCE FUTURES',
-      tradingViewSymbol: 'BINANCE:SKHYNIXUSDT.P',
+      displayName: 'SK하이닉스',
+      exchange: 'KRX',
+      tradingViewSymbol: 'KRX:000660',
+    ),
+    TradingViewMarket(
+      ticker: 'NAVER',
+      displayName: 'NAVER',
+      exchange: 'KRX',
+      tradingViewSymbol: 'KRX:035420',
+    ),
+    TradingViewMarket(
+      ticker: 'NVDA',
+      displayName: 'NVIDIA',
+      exchange: 'NASDAQ',
+      tradingViewSymbol: 'NASDAQ:NVDA',
+    ),
+    TradingViewMarket(
+      ticker: 'TSLA',
+      displayName: 'Tesla',
+      exchange: 'NASDAQ',
+      tradingViewSymbol: 'NASDAQ:TSLA',
+    ),
+    TradingViewMarket(
+      ticker: 'INTC',
+      displayName: 'Intel',
+      exchange: 'NASDAQ',
+      tradingViewSymbol: 'NASDAQ:INTC',
+    ),
+    TradingViewMarket(
+      ticker: 'BA',
+      displayName: 'Boeing',
+      exchange: 'NYSE',
+      tradingViewSymbol: 'NYSE:BA',
+    ),
+    TradingViewMarket(
+      ticker: 'KOSPI',
+      displayName: 'KOSPI',
+      exchange: 'KRX',
+      tradingViewSymbol: 'KRX:KOSPI',
+    ),
+    TradingViewMarket(
+      ticker: 'NDX',
+      displayName: 'NASDAQ 100',
+      exchange: 'NASDAQ',
+      tradingViewSymbol: 'NASDAQ:NDX',
+    ),
+    TradingViewMarket(
+      ticker: 'SPX',
+      displayName: 'S&P 500',
+      exchange: 'S&P',
+      tradingViewSymbol: 'SP:SPX',
     ),
   ];
+
+  static TradingViewMarket findBySymbol(String symbol) {
+    return markets.firstWhere(
+      (market) => market.tradingViewSymbol == symbol,
+      orElse: () => markets.first,
+    );
+  }
 }

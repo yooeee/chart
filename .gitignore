@@ -69,3 +69,16 @@ key.properties
 /artifacts/
 /release/
 /dist/
+
+# NestJS backend generated/runtime files
+server/node_modules/
+server/dist/
+server/coverage/
+server/data/*.json
+server/data/*.tmp
+server/*.log
+npm-debug.log*
+
+# Local deployment files
+deploy/*.local
+deploy/**/*.local

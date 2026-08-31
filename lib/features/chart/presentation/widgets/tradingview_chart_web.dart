@@ -12,10 +12,14 @@ class TradingViewChart extends StatefulWidget {
     super.key,
     required this.symbol,
     this.interval = 'D',
+    this.theme = 'light',
+    this.showMarketPanels = false,
   });
 
   final String symbol;
   final String interval;
+  final String theme;
+  final bool showMarketPanels;
 
   @override
   State<TradingViewChart> createState() => _TradingViewChartState();
@@ -35,7 +39,8 @@ class _TradingViewChartState extends State<TradingViewChart> {
         ..className = 'tradingview-widget-container'
         ..style.width = '100%'
         ..style.height = '100%'
-        ..style.backgroundColor = '#ffffff';
+        ..style.backgroundColor =
+            widget.theme == 'dark' ? '#111318' : '#ffffff';
 
       final chart = web.HTMLDivElement()
         ..className = 'tradingview-widget-container__widget'
@@ -66,14 +71,16 @@ class _TradingViewChartState extends State<TradingViewChart> {
           'symbol': widget.symbol,
           'interval': widget.interval,
           'timezone': 'Asia/Seoul',
-          'theme': 'light',
+          'theme': widget.theme,
           'style': '1',
           'locale': 'ko',
           'withdateranges': true,
           'hide_side_toolbar': false,
           'allow_symbol_change': true,
           'save_image': false,
-          'calendar': false,
+          'calendar': widget.showMarketPanels,
+          'details': widget.showMarketPanels,
+          'hotlist': widget.showMarketPanels,
           'support_host': 'https://www.tradingview.com',
         });
 
