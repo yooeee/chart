@@ -289,7 +289,7 @@ class _TradingViewChartPage extends StatelessWidget {
                     color: saved ? AppColors.green : AppColors.muted,
                   ),
                 ),
-              ),
+              );
             },
           ),
         ),
