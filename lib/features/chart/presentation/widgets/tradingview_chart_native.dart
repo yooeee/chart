@@ -13,10 +13,14 @@ class TradingViewChart extends StatefulWidget {
     super.key,
     required this.symbol,
     this.interval = 'D',
+    this.theme = 'light',
+    this.showMarketPanels = false,
   });
 
   final String symbol;
   final String interval;
+  final String theme;
+  final bool showMarketPanels;
 
   @override
   State<TradingViewChart> createState() => _TradingViewChartState();
@@ -46,7 +50,9 @@ class _TradingViewChartState extends State<TradingViewChart> {
   void didUpdateWidget(covariant TradingViewChart oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.symbol != widget.symbol ||
-        oldWidget.interval != widget.interval) {
+        oldWidget.interval != widget.interval ||
+        oldWidget.theme != widget.theme ||
+        oldWidget.showMarketPanels != widget.showMarketPanels) {
       _isLoading = true;
       _loadChart();
     }
@@ -57,6 +63,8 @@ class _TradingViewChartState extends State<TradingViewChart> {
       _tradingViewDocument(
         symbol: widget.symbol,
         interval: widget.interval,
+        theme: widget.theme,
+        showMarketPanels: widget.showMarketPanels,
       ),
       baseUrl: 'https://www.tradingview.com/',
     );
@@ -70,7 +78,9 @@ class _TradingViewChartState extends State<TradingViewChart> {
         WebViewWidget(controller: _controller),
         if (_isLoading)
           const ColoredBox(
-            color: Colors.white,
+            color: widget.theme == 'dark'
+                ? const Color(0xff111318)
+                : Colors.white,
             child: Center(
               child: SizedBox(
                 width: 22,
@@ -87,20 +97,24 @@ class _TradingViewChartState extends State<TradingViewChart> {
 String _tradingViewDocument({
   required String symbol,
   required String interval,
+  required String theme,
+  required bool showMarketPanels,
 }) {
   final config = jsonEncode(<String, Object>{
     'autosize': true,
     'symbol': symbol,
     'interval': interval,
     'timezone': 'Asia/Seoul',
-    'theme': 'light',
+    'theme': theme,
     'style': '1',
     'locale': 'ko',
     'withdateranges': true,
     'hide_side_toolbar': false,
     'allow_symbol_change': true,
     'save_image': false,
-    'calendar': false,
+    'calendar': showMarketPanels,
+    'details': showMarketPanels,
+    'hotlist': showMarketPanels,
     'support_host': 'https://www.tradingview.com',
   });
 
@@ -119,7 +133,7 @@ String _tradingViewDocument({
         height: 100%;
         margin: 0;
         overflow: hidden;
-        background: #ffffff;
+        background: ${theme == 'dark' ? '#111318' : '#ffffff'};
       }
 
       .tradingview-widget-container {

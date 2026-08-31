@@ -21,6 +21,19 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter create --platforms=web .
+      - run: ./.github/scripts/apply_branding.sh web
+      - run: flutter pub get
+      - run: flutter build web --release --base-href "/"
+
   build-android-apk:
     runs-on: ubuntu-latest
     steps:
@@ -46,7 +59,11 @@ jobs:
             sed -i.bak 's#<manifest xmlns:android="http://schemas.android.com/apk/res/android">#<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n    <uses-permission android:name="android.permission.INTERNET" />#' "$manifest"
           fi
       - run: flutter pub get
-      - run: flutter build apk --release
+      - name: Build Android release APK
+        run: >-
+          flutter build apk --release
+          --dart-define=PULSE_API_BASE_URL=${{ vars.PULSE_API_BASE_URL }}
+          --dart-define=GOOGLE_SERVER_CLIENT_ID=${{ vars.GOOGLE_SERVER_CLIENT_ID }}
       - uses: actions/upload-artifact@v4
         with:
           name: pulse-chart-release-apk
