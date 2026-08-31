@@ -44,10 +44,6 @@ class _TradingViewWorkspacePageState extends State<TradingViewWorkspacePage> {
     _workspaceController.selectMarket(market);
   }
 
-  void _showIntroduction() {
-    setState(() => _activeSection = _WorkspaceSection.introduction);
-  }
-
   void _showChart() {
     setState(() => _activeSection = _WorkspaceSection.chart);
   }

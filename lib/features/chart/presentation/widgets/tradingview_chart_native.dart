@@ -77,11 +77,11 @@ class _TradingViewChartState extends State<TradingViewChart> {
       children: [
         WebViewWidget(controller: _controller),
         if (_isLoading)
-          const ColoredBox(
+          ColoredBox(
             color: widget.theme == 'dark'
                 ? const Color(0xff111318)
                 : Colors.white,
-            child: Center(
+            child: const Center(
               child: SizedBox(
                 width: 22,
                 height: 22,
