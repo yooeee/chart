@@ -20,14 +20,14 @@ class MarketIntelligencePage extends StatelessWidget {
     return DefaultTabController(
       length: 2,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _PageHeading(
               eyebrow: 'MARKET INTELLIGENCE',
-              title: '오늘의 시장을 한 화면에서 확인하세요',
-              description: '주요 지수·상승률·하락률·코인과 경제 일정을 분리해 제공합니다.',
+              title: '시장 둘러보기',
+              description: '주요 종목의 흐름과 경제 일정을 확인하세요.',
             ),
             const SizedBox(height: 16),
             Container(
@@ -80,8 +80,8 @@ class _PageHeading extends StatelessWidget {
         Text(
           eyebrow,
           style: const TextStyle(
-            color: AppColors.green,
-            fontSize: 10,
+            color: AppColors.greenInk,
+            fontSize: 14,
             fontWeight: FontWeight.w800,
             letterSpacing: 1.1,
           ),
@@ -99,7 +99,7 @@ class _PageHeading extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           description,
-          style: const TextStyle(color: AppColors.body, fontSize: 12),
+          style: const TextStyle(color: AppColors.body, fontSize: 14),
         ),
       ],
     );
@@ -107,66 +107,31 @@ class _PageHeading extends StatelessWidget {
 }
 
 class _MarketSummaryView extends StatelessWidget {
-  const _MarketSummaryView({
-    required this.data,
-    required this.onOpenMarket,
-  });
-
+  const _MarketSummaryView({required this.data, required this.onOpenMarket});
   final MarketSummaryData data;
   final ValueChanged<TradingViewMarket> onOpenMarket;
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 1050
-            ? 4
-            : constraints.maxWidth >= 620
-                ? 2
-                : 1;
-        return ListView(
-          children: [
-            _DataSourceBanner(
-              isDemo: data.isDemo,
-              configured: data.configured,
-              source: data.source,
-            ),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: columns,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: columns == 1 ? 2.5 : 1.45,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _MarketGroupCard(
-                  title: '주요 지수',
-                  items: data.indices,
-                  onOpenMarket: onOpenMarket,
-                ),
-                _MarketGroupCard(
-                  title: '상승률 상위',
-                  items: data.gainers,
-                  onOpenMarket: onOpenMarket,
-                ),
-                _MarketGroupCard(
-                  title: '하락률 상위',
-                  items: data.losers,
-                  onOpenMarket: onOpenMarket,
-                ),
-                _MarketGroupCard(
-                  title: '주요 코인',
-                  items: data.crypto,
-                  onOpenMarket: onOpenMarket,
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, constraints) {
+    final enlarged = MediaQuery.textScalerOf(context).scale(14) > 20;
+    final columns = !enlarged && constraints.maxWidth >= 1180 ? 4
+      : !enlarged && constraints.maxWidth >= 660 ? 2 : 1;
+    final groups = <String, List<MarketSnapshot>>{
+      '주요 지수': data.indices, '상승률 상위': data.gainers,
+      '하락률 상위': data.losers, '주요 코인': data.crypto,
+    };
+    return ListView(children: [
+      _DataSourceBanner(isDemo: data.isDemo, configured: data.configured, source: data.source),
+      const SizedBox(height: 16),
+      Wrap(spacing: 16, runSpacing: 16, children: [
+        for (final group in groups.entries)
+          SizedBox(
+            width: (constraints.maxWidth - (columns - 1) * 16) / columns,
+            child: _MarketGroupCard(title: group.key, items: group.value, onOpenMarket: onOpenMarket),
+          ),
+      ]),
+    ]);
+  });
 }
 
 class _DataSourceBanner extends StatelessWidget {
@@ -183,10 +148,10 @@ class _DataSourceBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final message = isDemo
-        ? '현재 샘플 데이터입니다. 실제 배포 전 시세 API 공급자를 연결하세요.'
+        ? '샘플 데이터 · 현재 시세와 다릅니다.'
         : configured
             ? '$source 데이터에 연결되어 있습니다.'
-            : '시세 API 공급자가 설정되지 않았습니다.';
+            : '현재 시장 데이터를 불러올 수 없습니다.';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       color: isDemo ? const Color(0xfffff7df) : const Color(0xffeefaf2),
@@ -203,7 +168,7 @@ class _DataSourceBanner extends StatelessWidget {
               message,
               style: const TextStyle(
                 color: AppColors.label,
-                fontSize: 11,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -215,108 +180,65 @@ class _DataSourceBanner extends StatelessWidget {
 }
 
 class _MarketGroupCard extends StatelessWidget {
-  const _MarketGroupCard({
-    required this.title,
-    required this.items,
-    required this.onOpenMarket,
-  });
-
+  const _MarketGroupCard({required this.title, required this.items, required this.onOpenMarket});
   final String title;
   final List<MarketSnapshot> items;
   final ValueChanged<TradingViewMarket> onOpenMarket;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: AppColors.ink,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 10),
-          for (final item in items)
-            Expanded(
-              child: _MarketSnapshotRow(
-                item: item,
-                onTap: () {
-                  final matches = TradingViewMarket.markets
-                      .where((market) => market.tradingViewSymbol == item.symbol);
-                  if (matches.isNotEmpty) onOpenMarket(matches.first);
-                },
-              ),
-            ),
-          if (items.isEmpty)
-            const Expanded(
-              child: Center(
-                child: Text(
-                  '데이터 없음',
-                  style: TextStyle(color: AppColors.muted, fontSize: 11),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white, borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: AppColors.border),
+    ),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text(title, style: const TextStyle(color: AppColors.ink, fontSize: 17, fontWeight: FontWeight.w700)),
+      const SizedBox(height: 16),
+      const Divider(height: 1),
+      for (final item in items)
+        _MarketSnapshotRow(
+          item: item,
+          onTap: TradingViewMarket.markets.any((market) => market.tradingViewSymbol == item.symbol)
+            ? () => onOpenMarket(TradingViewMarket.findBySymbol(item.symbol)) : null,
+        ),
+      if (items.isEmpty)
+        const Padding(padding: EdgeInsets.symmetric(vertical: 40),
+          child: Text('표시할 데이터가 없습니다.', style: TextStyle(color: AppColors.muted, fontSize: 14))),
+    ]),
+  );
 }
 
 class _MarketSnapshotRow extends StatelessWidget {
   const _MarketSnapshotRow({required this.item, required this.onTap});
-
   final MarketSnapshot item;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final up = item.changePercent >= 0;
-    final changeColor = up ? const Color(0xff009944) : AppColors.chartDown;
+    final color = up ? AppColors.greenInk : AppColors.chartDown;
     return InkWell(
       onTap: onTap,
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.ink,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  item.price.toStringAsFixed(item.price >= 1000 ? 0 : 2),
-                  style: const TextStyle(color: AppColors.body, fontSize: 10),
-                ),
-              ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Expanded(child: Text(item.name, style: const TextStyle(color: AppColors.label, fontSize: 14, fontWeight: FontWeight.w600))),
+            if (onTap != null) const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.muted),
+          ]),
+          const SizedBox(height: 9),
+          Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, runSpacing: 8, children: [
+            Text(item.price.toStringAsFixed(item.price >= 1000 ? 0 : 2),
+              style: const TextStyle(color: AppColors.ink, fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -.4)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              decoration: BoxDecoration(color: color.withValues(alpha: .08), borderRadius: BorderRadius.circular(5)),
+              child: Text('${up ? '+' : ''}${item.changePercent.toStringAsFixed(2)}%',
+                style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w700)),
             ),
-          ),
-          Text(
-            '${up ? '+' : ''}${item.changePercent.toStringAsFixed(2)}%',
-            style: TextStyle(
-              color: changeColor,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(width: 2),
-          const Icon(Icons.chevron_right, size: 15, color: AppColors.muted),
-        ],
+          ]),
+        ]),
       ),
     );
   }
@@ -351,7 +273,7 @@ class _EconomicCalendarView extends StatelessWidget {
                   padding: EdgeInsets.all(32),
                   child: Text(
                     '등록된 경제 일정이 없습니다.',
-                    style: TextStyle(color: AppColors.muted, fontSize: 12),
+                    style: TextStyle(color: AppColors.muted, fontSize: 14),
                   ),
                 ),
             ],
@@ -364,69 +286,30 @@ class _EconomicCalendarView extends StatelessWidget {
 
 class _EconomicEventRow extends StatelessWidget {
   const _EconomicEventRow({required this.event});
-
   final EconomicCalendarEvent event;
 
   @override
   Widget build(BuildContext context) {
     final local = event.scheduledAt.toLocal();
-    final dateText =
-        '${local.month.toString().padLeft(2, '0')}.${local.day.toString().padLeft(2, '0')} '
-        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
-    final importanceColor = switch (event.importance) {
-      'high' => AppColors.chartDown,
-      'medium' => const Color(0xffffb020),
-      _ => AppColors.muted,
-    };
+    final date = '${local.month.toString().padLeft(2, '0')}.${local.day.toString().padLeft(2, '0')}';
+    final time = '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    final importance = switch (event.importance) {'high' => '중요도 높음', 'medium' => '중요도 보통', _ => '중요도 낮음'};
+    final color = event.importance == 'high' ? AppColors.chartDown : AppColors.body;
     return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 82,
-            child: Text(
-              dateText,
-              style: const TextStyle(
-                color: AppColors.body,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          Container(width: 4, height: 32, color: importanceColor),
-          const SizedBox(width: 12),
-          Container(
-            width: 32,
-            height: 24,
-            alignment: Alignment.center,
-            color: const Color(0xfff2f4f5),
-            child: Text(
-              event.country,
-              style: const TextStyle(
-                color: AppColors.label,
-                fontSize: 9,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              event.title,
-              style: const TextStyle(
-                color: AppColors.ink,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          if (event.forecast != null)
-            Text(
-              '예상 ${event.forecast}',
-              style: const TextStyle(color: AppColors.body, fontSize: 10),
-            ),
+      padding: const EdgeInsets.all(20),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Wrap(spacing: 14, runSpacing: 6, children: [
+          Text('$date  $time', style: const TextStyle(color: AppColors.body, fontSize: 12, fontWeight: FontWeight.w600)),
+          Text(event.country, style: const TextStyle(color: AppColors.label, fontSize: 12, fontWeight: FontWeight.w700)),
+          Text(importance, style: TextStyle(color: color, fontSize: 12)),
+        ]),
+        const SizedBox(height: 10),
+        Text(event.title, style: const TextStyle(color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.w700)),
+        if (event.forecast != null) ...[
+          const SizedBox(height: 8),
+          Text('예상 ${event.forecast}', style: const TextStyle(color: AppColors.body, fontSize: 14)),
         ],
-      ),
+      ]),
     );
   }
 }
