@@ -146,7 +146,7 @@ class PulseWorkspaceController extends ChangeNotifier {
       updatedAt: DateTime.now(),
     );
     _statusMessage = selected.contains(indicatorId)
-        ? '지표 선택을 저장했습니다. 차트 렌더링은 데이터·라이선스 연동 후 활성화됩니다.'
+        ? '지표 선택을 저장했습니다. 차트에는 아직 표시되지 않습니다.'
         : '지표 선택을 해제했습니다.';
     notifyListeners();
     await _persistPreferences();
@@ -430,3 +430,4 @@ class PulseWorkspaceController extends ChangeNotifier {
     super.dispose();
   }
 }
+

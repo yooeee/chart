@@ -14,6 +14,7 @@ import '../../../workspace/presentation/pages/indicator_guide_page.dart';
 import '../../../workspace/presentation/pages/market_intelligence_page.dart';
 import '../../../workspace/presentation/widgets/account_panel.dart';
 import '../../../workspace/presentation/widgets/watchlist_panel.dart';
+import '../../../workspace/presentation/widgets/market_avatar.dart';
 
 enum _WorkspaceSection { introduction, chart, market, indicators, alerts }
 
@@ -26,7 +27,7 @@ class TradingViewWorkspacePage extends StatefulWidget {
 
 class _TradingViewWorkspacePageState extends State<TradingViewWorkspacePage> {
   late final PulseWorkspaceController _workspaceController;
-  _WorkspaceSection _activeSection = _WorkspaceSection.introduction;
+  _WorkspaceSection _activeSection = _WorkspaceSection.chart;
 
   @override
   void initState() {
@@ -81,7 +82,7 @@ class _TradingViewWorkspacePageState extends State<TradingViewWorkspacePage> {
             message,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 11,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -154,147 +155,116 @@ class _TradingViewWorkspacePageState extends State<TradingViewWorkspacePage> {
 }
 
 class _TradingViewChartPage extends StatelessWidget {
-  const _TradingViewChartPage({
-    required this.controller,
-    required this.onMarketChanged,
-  });
-
+  const _TradingViewChartPage({required this.controller, required this.onMarketChanged});
   final PulseWorkspaceController controller;
   final ValueChanged<TradingViewMarket> onMarketChanged;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 760;
-        final showSideWatchlist = constraints.maxWidth >= 980;
-        final market = controller.selectedMarket;
-        final chartContent = Column(
-          children: [
-            _TradingViewWorkspaceHeader(
-              market: market,
-              onMarketChanged: onMarketChanged,
-            ),
-            if (!compact) ...[
-              const SizedBox(height: 12),
-              _TradingViewMarketStrip(market: market),
-              const SizedBox(height: 12),
-            ] else
-              const SizedBox(height: 6),
-            _TradingViewIndicatorToolbar(
-              selectedIndicatorIds: controller.activeIndicators,
-              onSelected: controller.toggleIndicator,
-            ),
-            SizedBox(height: compact ? 6 : 14),
-            Expanded(
-              child: _TradingViewChartCard(
-                market: market,
-                interval: controller.interval,
-                theme: controller.chartTheme,
-                onIntervalChanged: controller.setInterval,
-                onThemeChanged: controller.toggleChartTheme,
-                onFullScreen: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => FullScreenChartPage(
-                      market: market,
-                      interval: controller.interval,
-                      theme: controller.chartTheme,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            compact ? 12 : 24,
-            compact ? 12 : 20,
-            compact ? 12 : 24,
-            compact ? 16 : 24,
+    return LayoutBuilder(builder: (context, constraints) {
+      final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+      final compact = constraints.maxWidth < 760 || scale > 1.5;
+      final sidebar = constraints.maxWidth >= 1100 && !compact;
+      final market = controller.selectedMarket;
+      final header = _TradingViewWorkspaceHeader(
+        market: market, onMarketChanged: onMarketChanged,
+        isSaved: controller.isInWatchlist(market),
+        onToggleSaved: () => controller.toggleWatchlist(market),
+      );
+      final chart = _TradingViewChartCard(
+        market: market, interval: controller.interval, theme: controller.chartTheme,
+        onIntervalChanged: controller.setInterval,
+        onThemeChanged: controller.toggleChartTheme,
+        onFullScreen: () => Navigator.of(context).push(MaterialPageRoute<void>(
+          builder: (_) => FullScreenChartPage(
+            market: market, interval: controller.interval, theme: controller.chartTheme,
           ),
-          child: showSideWatchlist
-              ? Row(
-                  children: [
-                    WatchlistPanel(
-                      markets: controller.watchlistMarkets,
-                      selectedMarket: market,
-                      onSelected: onMarketChanged,
-                      onRemove: controller.toggleWatchlist,
-                      onAdd: () => _showMarketPicker(context),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(child: chartContent),
-                  ],
-                )
-              : Column(
-                  children: [
-                    CompactWatchlistBar(
-                      markets: controller.watchlistMarkets,
-                      selectedMarket: market,
-                      onSelected: onMarketChanged,
-                      onAdd: () => _showMarketPicker(context),
-                    ),
-                    const SizedBox(height: 8),
-                    Expanded(child: chartContent),
-                  ],
-                ),
+        )),
+      );
+      final indicators = _TradingViewIndicatorToolbar(
+        selectedIndicatorIds: controller.activeIndicators, onSelected: controller.toggleIndicator,
+      );
+      final watchlist = CompactWatchlistBar(
+        markets: controller.watchlistMarkets, selectedMarket: market,
+        onSelected: onMarketChanged, onAdd: () => _showMarketPicker(context),
+      );
+      if (compact) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            watchlist, const SizedBox(height: 20), header, const SizedBox(height: 16),
+            SizedBox(height: 500 + (scale - 1) * 90, child: chart),
+            const SizedBox(height: 16), indicators,
+          ]),
         );
-      },
-    );
+      }
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: SizedBox(
+          height: math.max(constraints.maxHeight - 40, (sidebar ? 640.0 : 710.0) * scale),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (sidebar) ...[
+              WatchlistPanel(
+                markets: controller.watchlistMarkets, selectedMarket: market,
+                onSelected: onMarketChanged, onRemove: controller.toggleWatchlist,
+                onAdd: () => _showMarketPicker(context),
+              ),
+              const SizedBox(width: 20),
+            ],
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              if (!sidebar) ...[watchlist, const SizedBox(height: 16)],
+              header, const SizedBox(height: 18), Expanded(child: chart),
+              const SizedBox(height: 14), indicators,
+            ])),
+          ]),
+        ),
+      );
+    });
   }
 
   Future<void> _showMarketPicker(BuildContext context) async {
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: const Text('관심종목 관리'),
-        content: SizedBox(
-          width: 420,
-          height: 440,
-          child: ListView.separated(
-            itemCount: TradingViewMarket.markets.length,
-            separatorBuilder: (_, __) =>
-                const Divider(height: 1, color: AppColors.border),
-            itemBuilder: (context, index) {
-              final market = TradingViewMarket.markets[index];
-              final saved = controller.isInWatchlist(market);
-              return ListTile(
-                onTap: () async {
-                  if (!saved) await controller.toggleWatchlist(market);
-                  onMarketChanged(market);
-                  if (context.mounted) Navigator.pop(context);
-                },
-                title: Text(
-                  market.displayName,
-                  style: const TextStyle(
-                    color: AppColors.ink,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+      builder: (context) => AnimatedBuilder(
+        animation: controller,
+        builder: (context, _) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('관심종목 관리'),
+          content: SizedBox(
+            width: 440, height: 440,
+            child: ListView.separated(
+              itemCount: TradingViewMarket.markets.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final market = TradingViewMarket.markets[index];
+                final saved = controller.isInWatchlist(market);
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                  leading: MarketAvatar(market: market),
+                  onTap: () async {
+                    if (!saved) {
+                      await controller.toggleWatchlist(market);
+                    }
+                    onMarketChanged(market);
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
+                  },
+                  title: Text(market.displayName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                  subtitle: Text('${market.exchange} · ${market.ticker}', style: const TextStyle(color: AppColors.body, fontSize: 12)),
+                  trailing: IconButton(
+                    tooltip: saved ? '관심종목에서 제거' : '관심종목에 추가',
+                    onPressed: () => controller.toggleWatchlist(market),
+                    icon: Icon(saved ? Icons.star_rounded : Icons.star_border_rounded, color: saved ? AppColors.greenInk : AppColors.muted),
                   ),
-                ),
-                subtitle: Text(
-                  '${market.exchange} · ${market.tradingViewSymbol}',
-                  style: const TextStyle(color: AppColors.muted, fontSize: 9),
-                ),
-                trailing: IconButton(
-                  onPressed: () => controller.toggleWatchlist(market),
-                  icon: Icon(
-                    saved ? Icons.star_rounded : Icons.star_border_rounded,
-                    color: saved ? AppColors.green : AppColors.muted,
-                  ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
+          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('완료'))],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('닫기'),
-          ),
-        ],
       ),
     );
   }
@@ -302,507 +272,286 @@ class _TradingViewChartPage extends StatelessWidget {
 
 class _TradingViewTopNavigation extends StatelessWidget {
   const _TradingViewTopNavigation({
-    required this.activeSection,
-    required this.account,
-    required this.unreadNotificationCount,
-    required this.onSectionSelected,
-    required this.onAccountSelected,
+    required this.activeSection, required this.account, required this.unreadNotificationCount,
+    required this.onSectionSelected, required this.onAccountSelected,
   });
-
   final _WorkspaceSection activeSection;
   final PulseAccount? account;
   final int unreadNotificationCount;
   final ValueChanged<_WorkspaceSection> onSectionSelected;
   final VoidCallback onAccountSelected;
 
+  static const _sections = [
+    _WorkspaceSection.chart, _WorkspaceSection.market, _WorkspaceSection.indicators,
+    _WorkspaceSection.alerts, _WorkspaceSection.introduction,
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 72,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 980;
-          return Row(
-            children: [
-              if (compact)
-                PopupMenuButton<_WorkspaceSection>(
-                  icon: const Icon(Icons.menu_rounded, color: AppColors.ink),
-                  onSelected: onSectionSelected,
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(
-                      value: _WorkspaceSection.introduction,
-                      child: Text('소개'),
-                    ),
-                    PopupMenuItem(
-                      value: _WorkspaceSection.chart,
-                      child: Text('차트'),
-                    ),
-                    PopupMenuItem(
-                      value: _WorkspaceSection.market,
-                      child: Text('시장'),
-                    ),
-                    PopupMenuItem(
-                      value: _WorkspaceSection.indicators,
-                      child: Text('지표 가이드'),
-                    ),
-                    PopupMenuItem(
-                      value: _WorkspaceSection.alerts,
-                      child: Text('알림'),
-                    ),
-                  ],
-                ),
-              const _TradingViewBrandMark(),
-              if (!compact) ...[
-                const SizedBox(width: 30),
-                for (final section in _WorkspaceSection.values)
-                  _TradingViewNavItem(
-                    label: _sectionLabel(section),
-                    active: activeSection == section,
-                    onTap: () => onSectionSelected(section),
-                  ),
-              ],
-              const Spacer(),
-              if (!compact) ...[
-                InkWell(
-                  onTap: () => onSectionSelected(_WorkspaceSection.alerts),
-                  child: Badge(
-                    isLabelVisible: unreadNotificationCount > 0,
-                    label: Text('$unreadNotificationCount'),
-                    child: const Icon(
-                      Icons.notifications_none_rounded,
-                      size: 20,
-                      color: AppColors.body,
-                    ),
+    return LayoutBuilder(builder: (context, constraints) {
+      final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+      final compact = constraints.maxWidth < 1000 || scale > 1.3;
+      final tabs = Row(children: [
+        for (final section in _sections)
+          _TradingViewNavItem(
+            label: _sectionLabel(section), active: activeSection == section,
+            onTap: () => onSectionSelected(section),
+          ),
+      ]);
+      return Material(
+        color: AppColors.navigation,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          SizedBox(
+            height: 68 + math.max(0.0, scale - 1) * 20,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 24),
+              child: Row(children: [
+                Semantics(
+                  button: true, label: 'Pulse Chart 홈',
+                  child: InkWell(
+                    onTap: () => onSectionSelected(_WorkspaceSection.chart),
+                    borderRadius: BorderRadius.circular(6),
+                    child: const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: _TradingViewBrandMark()),
                   ),
                 ),
-                const SizedBox(width: 18),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                  color: const Color(0xffeefaf2),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(width: 6, height: 6, child: DecoratedBox(decoration: BoxDecoration(color: AppColors.green, shape: BoxShape.circle))),
-                      SizedBox(width: 6),
-                      Text('LIVE MARKET', style: TextStyle(color: AppColors.label, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .6)),
-                    ],
+                if (!compact) ...[
+                  const SizedBox(width: 40), Expanded(child: tabs),
+                ] else const Spacer(),
+                IconButton(
+                  tooltip: '알림', onPressed: () => onSectionSelected(_WorkspaceSection.alerts),
+                  icon: Badge(
+                    isLabelVisible: unreadNotificationCount > 0, label: Text('$unreadNotificationCount'),
+                    child: const Icon(Icons.notifications_none_rounded, color: AppColors.navigationMuted, size: 22),
                   ),
                 ),
-                const SizedBox(width: 16),
-              ],
-              InkWell(
-                onTap: onAccountSelected,
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  alignment: Alignment.center,
-                  color: AppColors.ink,
-                  child: Text(
-                    _initials(account?.displayName),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
+                const SizedBox(width: 10),
+                Tooltip(
+                  message: account == null ? '로그인' : '내 계정',
+                  child: OutlinedButton(
+                    onPressed: onAccountSelected,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white, backgroundColor: const Color(0xff202833),
+                      side: const BorderSide(color: Color(0xff34404e)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                     ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(account == null ? Icons.person_outline_rounded : Icons.account_circle_outlined, size: 19),
+                      if (!compact) ...[
+                        const SizedBox(width: 8), Text(account == null ? '로그인' : '내 계정'),
+                      ],
+                    ]),
                   ),
                 ),
+              ]),
+            ),
+          ),
+          if (compact)
+            Container(
+              height: 48 + math.max(0.0, scale - 1) * 16,
+              decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xff26303c)))),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 6), child: tabs,
               ),
-            ],
-          );
-        },
-      ),
-    );
+            ),
+        ]),
+      );
+    });
   }
 
   static String _sectionLabel(_WorkspaceSection section) => switch (section) {
-        _WorkspaceSection.introduction => '소개',
-        _WorkspaceSection.chart => '차트',
-        _WorkspaceSection.market => '시장',
-        _WorkspaceSection.indicators => '지표',
-        _WorkspaceSection.alerts => '알림',
-      };
-
-  String _initials(String? displayName) {
-    if (displayName == null || displayName.trim().isEmpty) return 'YE';
-    final parts = displayName.trim().split(RegExp(r'\s+'));
-    return parts.take(2).map((part) => part[0]).join().toUpperCase();
-  }
+    _WorkspaceSection.introduction => '소개',
+    _WorkspaceSection.chart => '차트',
+    _WorkspaceSection.market => '시장',
+    _WorkspaceSection.indicators => '지표 가이드',
+    _WorkspaceSection.alerts => '알림',
+  };
 }
 
 class _TradingViewBrandMark extends StatelessWidget {
   const _TradingViewBrandMark();
-
   @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Image.asset(
-          'assets/branding/pulse_chart_icon.png',
-          width: 26,
-          height: 26,
-          fit: BoxFit.cover,
-          filterQuality: FilterQuality.high,
-        ),
-        const SizedBox(width: 9),
-        const Text('PULSE', style: TextStyle(color: AppColors.ink, fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 1.6)),
-        const SizedBox(width: 6),
-        const Text('MARKET LAB', style: TextStyle(color: AppColors.muted, fontSize: 9, letterSpacing: 1.1)),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => const Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(Icons.stacked_line_chart_rounded, color: AppColors.green, size: 28),
+      SizedBox(width: 10),
+      Text('PULSE', textScaler: TextScaler.noScaling,
+        style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: 1.4)),
+    ],
+  );
 }
 
 class _TradingViewNavItem extends StatelessWidget {
-  const _TradingViewNavItem({
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
+  const _TradingViewNavItem({required this.label, required this.active, required this.onTap});
   final String label;
   final bool active;
   final VoidCallback onTap;
-
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
+  Widget build(BuildContext context) => Semantics(
+    selected: active, button: true,
+    child: InkWell(
+      onTap: onTap, hoverColor: Colors.white.withValues(alpha: .06),
       child: Container(
         height: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 18),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: active ? AppColors.green : Colors.transparent, width: 3)),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: active ? AppColors.ink : AppColors.body,
-            fontSize: 14,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w400,
-          ),
-        ),
+        child: Text(label, style: TextStyle(
+          color: active ? Colors.white : AppColors.navigationMuted,
+          fontSize: 14, fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+        )),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _TradingViewWorkspaceHeader extends StatelessWidget {
   const _TradingViewWorkspaceHeader({
-    required this.market,
-    required this.onMarketChanged,
+    required this.market, required this.onMarketChanged,
+    required this.isSaved, required this.onToggleSaved,
   });
-
   final TradingViewMarket market;
   final ValueChanged<TradingViewMarket> onMarketChanged;
+  final bool isSaved;
+  final VoidCallback onToggleSaved;
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 600;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _TradingViewMarketSelector(
-                  market: market,
-                  onChanged: onMarketChanged,
-                ),
-                const SizedBox(width: 12),
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    market.exchange,
-                    style: const TextStyle(color: AppColors.muted, fontSize: 11),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 7),
-            if (compact)
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'LIVE MARKET DATA',
-                    style: TextStyle(color: AppColors.ink, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -.5),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'TradingView Advanced Chart',
-                    style: TextStyle(color: AppColors.body, fontSize: 11),
-                  ),
-                ],
-              )
-            else
-              const Row(
-                children: [
-                  Text(
-                    'LIVE MARKET DATA',
-                    style: TextStyle(color: AppColors.ink, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -.6),
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    'TradingView Advanced Chart',
-                    style: TextStyle(color: AppColors.body, fontSize: 12),
-                  ),
-                ],
-              ),
-          ],
-        );
-      },
-    );
-  }
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, constraints) {
+    final compact = constraints.maxWidth < 600;
+    return Row(children: [
+      if (!compact) ...[MarketAvatar(market: market, size: 52), const SizedBox(width: 14)],
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('차트 워크스페이스', style: TextStyle(color: AppColors.body, fontSize: 12, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        Text(market.displayName, overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: AppColors.ink, fontSize: compact ? 24 : 28, fontWeight: FontWeight.w800, letterSpacing: -.8)),
+        const SizedBox(height: 4),
+        Text('${market.exchange}  /  ${market.tradingViewSymbol.split(':').last}',
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: AppColors.body, fontSize: 12, fontWeight: FontWeight.w500)),
+      ])),
+      IconButton(
+        tooltip: isSaved ? '관심종목에서 제거' : '관심종목에 추가',
+        onPressed: onToggleSaved,
+        icon: Icon(isSaved ? Icons.star_rounded : Icons.star_border_rounded,
+          color: isSaved ? AppColors.greenInk : AppColors.muted, size: 22),
+      ),
+      const SizedBox(width: 6),
+      _TradingViewMarketSelector(market: market, onChanged: onMarketChanged, compact: compact),
+    ]);
+  });
 }
 
 class _TradingViewMarketSelector extends StatelessWidget {
-  const _TradingViewMarketSelector({required this.market, required this.onChanged});
-
+  const _TradingViewMarketSelector({required this.market, required this.onChanged, required this.compact});
   final TradingViewMarket market;
   final ValueChanged<TradingViewMarket> onChanged;
+  final bool compact;
 
   @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<TradingViewMarket>(
-      initialValue: market,
-      onSelected: onChanged,
-      color: Colors.white,
-      elevation: 3,
-      itemBuilder: (context) => TradingViewMarket.markets
-          .map(
-            (item) => PopupMenuItem<TradingViewMarket>(
-              value: item,
-              height: 40,
-              child: Text('${item.ticker}  ·  ${item.displayName}', style: const TextStyle(color: AppColors.ink, fontSize: 13)),
-            ),
-          )
-          .toList(),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(market.ticker, style: const TextStyle(color: AppColors.ink, fontSize: 20, fontWeight: FontWeight.w800)),
-          const SizedBox(width: 4),
-          const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: AppColors.body),
+  Widget build(BuildContext context) => PopupMenuButton<TradingViewMarket>(
+    tooltip: '종목 변경', initialValue: market, onSelected: onChanged,
+    color: Colors.white, surfaceTintColor: Colors.transparent,
+    position: PopupMenuPosition.under,
+    constraints: const BoxConstraints(minWidth: 260, maxWidth: 340),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    itemBuilder: (context) => TradingViewMarket.markets.map((item) => PopupMenuItem<TradingViewMarket>(
+      value: item, height: 56,
+      child: Row(children: [
+        MarketAvatar(market: item, size: 32), const SizedBox(width: 12),
+        Expanded(child: Text(item.displayName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
+        if (item.tradingViewSymbol == market.tradingViewSymbol)
+          const Icon(Icons.check_rounded, color: AppColors.greenInk, size: 18),
+      ]),
+    )).toList(),
+    child: Container(
+      constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(color: Colors.white,
+        borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.border)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.swap_horiz_rounded, size: 18, color: AppColors.label),
+        if (!compact) ...[
+          const SizedBox(width: 8),
+          const Text('종목 변경', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
         ],
-      ),
-    );
-  }
+      ]),
+    ),
+  );
 }
-
-class _TradingViewMarketStrip extends StatelessWidget {
-  const _TradingViewMarketStrip({required this.market});
-
-  final TradingViewMarket market;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.border)),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        child: Row(
-          children: [
-            const Text('MARKET DATA', style: TextStyle(color: AppColors.muted, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: .8)),
-            const SizedBox(width: 18),
-            _item('SYMBOL', market.tradingViewSymbol),
-            _item('SOURCE', 'TRADINGVIEW'),
-            const Text('실시간 차트는 거래소별 지연 정책이 적용될 수 있습니다.', style: TextStyle(color: AppColors.muted, fontSize: 9)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _item(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 20),
-      child: RichText(
-        text: TextSpan(
-          children: [
-            TextSpan(text: '$label  ', style: const TextStyle(color: AppColors.body, fontSize: 10)),
-            TextSpan(text: value, style: const TextStyle(color: AppColors.ink, fontSize: 10, fontWeight: FontWeight.w700)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-
 
 class _TradingViewIndicatorToolbar extends StatelessWidget {
-  const _TradingViewIndicatorToolbar({
-    required this.selectedIndicatorIds,
-    required this.onSelected,
-  });
-
+  const _TradingViewIndicatorToolbar({required this.selectedIndicatorIds, required this.onSelected});
   final Set<String> selectedIndicatorIds;
   final ValueChanged<String> onSelected;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 600;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 7,
-                    height: 7,
-                    color: AppColors.green,
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'SIGNAL LAYER',
-                    style: TextStyle(
-                      color: AppColors.ink,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: .8,
-                    ),
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Text(
-                      compact ? '보조지표 선택' : '보조지표를 선택해 차트 분석 레이어를 확장하세요.',
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.body,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ),
-                  if (!compact)
-                    Text(
-                      '${selectedIndicatorIds.length} / 6 SELECTED',
-                      style: const TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 8,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: .65,
-                      ),
-                    ),
-                ],
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(color: Colors.white,
+      borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.border)),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        const Icon(Icons.tune_rounded, color: AppColors.label, size: 18),
+        const SizedBox(width: 8),
+        const Expanded(child: Text('보조지표 설정', style: TextStyle(color: AppColors.ink, fontSize: 14, fontWeight: FontWeight.w700))),
+        Text('${selectedIndicatorIds.length} / 6', style: const TextStyle(color: AppColors.greenInk, fontSize: 12, fontWeight: FontWeight.w700)),
+      ]),
+      const SizedBox(height: 12),
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(children: [
+          for (var i = 0; i < _TradingViewIntroductionPageState._studies.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _TradingViewIndicatorChip(
+                data: _TradingViewIntroductionPageState._studies[i],
+                indicatorId: IndicatorGuideEntry.entries[i].id,
+                selected: selectedIndicatorIds.contains(IndicatorGuideEntry.entries[i].id),
+                onSelected: onSelected,
               ),
-              const SizedBox(height: 9),
-              SizedBox(
-                height: 38,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Row(
-                    children: [
-                      for (var index = 0; index < _TradingViewIntroductionPageState._studies.length; index++)
-                        Padding(
-                          padding: EdgeInsets.only(
-                            right: index == _TradingViewIntroductionPageState._studies.length - 1 ? 0 : 7,
-                          ),
-                          child: _TradingViewIndicatorChip(
-                            data: _TradingViewIntroductionPageState._studies[index],
-                            indicatorId: IndicatorGuideEntry.entries[index].id,
-                            selected: selectedIndicatorIds.contains(
-                              IndicatorGuideEntry.entries[index].id,
-                            ),
-                            onSelected: onSelected,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+        ]),
       ),
-    );
-  }
+      const SizedBox(height: 10),
+      const Text('선택한 지표는 저장됩니다. 차트 내 지표 표시는 아직 지원하지 않습니다.',
+        style: TextStyle(color: AppColors.body, fontSize: 12, height: 1.5)),
+    ]),
+  );
 }
 
 class _TradingViewIndicatorChip extends StatelessWidget {
-  const _TradingViewIndicatorChip({
-    required this.data,
-    required this.indicatorId,
-    required this.selected,
-    required this.onSelected,
-  });
-
+  const _TradingViewIndicatorChip({required this.data, required this.indicatorId, required this.selected, required this.onSelected});
   final _TradingViewStudyPreviewData data;
   final String indicatorId;
   final bool selected;
   final ValueChanged<String> onSelected;
 
   @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? const Color(0xffeefaf2) : const Color(0xfff7faf8),
+  Widget build(BuildContext context) => Semantics(
+    button: true, selected: selected,
+    child: Material(
+      color: selected ? AppColors.greenWash : AppColors.surfaceMuted,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(7),
+        side: BorderSide(color: selected ? const Color(0xffa7daba) : AppColors.border),
+      ),
       child: InkWell(
-        onTap: () => onSelected(indicatorId),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: selected ? AppColors.green : AppColors.border,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                color: data.accent,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                data.title,
-                style: const TextStyle(
-                  color: AppColors.ink,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: 9),
-              Icon(
-                selected ? Icons.check_circle : Icons.add_circle_outline,
-                size: 13,
-                color: selected ? AppColors.green : AppColors.muted,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                selected ? '선택됨' : '선택',
-                style: TextStyle(
-                  color: selected ? AppColors.ink : AppColors.muted,
-                  fontSize: 8,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
+        onTap: () => onSelected(indicatorId), borderRadius: BorderRadius.circular(7),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(selected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+              size: 18, color: selected ? AppColors.greenInk : AppColors.muted),
+            const SizedBox(width: 8),
+            Text(data.title, style: TextStyle(color: selected ? AppColors.greenInk : AppColors.label, fontSize: 14, fontWeight: FontWeight.w600)),
+          ]),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _TradingViewIntroductionPage extends StatefulWidget {
@@ -2743,14 +2492,9 @@ class _TradingViewStudyPreviewData {
 
 class _TradingViewChartCard extends StatelessWidget {
   const _TradingViewChartCard({
-    required this.market,
-    required this.interval,
-    required this.theme,
-    required this.onIntervalChanged,
-    required this.onThemeChanged,
-    required this.onFullScreen,
+    required this.market, required this.interval, required this.theme,
+    required this.onIntervalChanged, required this.onThemeChanged, required this.onFullScreen,
   });
-
   final TradingViewMarket market;
   final String interval;
   final ChartThemePreference theme;
@@ -2758,112 +2502,96 @@ class _TradingViewChartCard extends StatelessWidget {
   final VoidCallback onThemeChanged;
   final VoidCallback onFullScreen;
 
+  static const _intervals = {'15': '15분', '60': '1시간', '240': '4시간', 'D': '일봉', 'W': '주봉'};
+
   @override
   Widget build(BuildContext context) {
+    final dark = theme == ChartThemePreference.dark;
+    final foreground = dark ? const Color(0xffe1e6ef) : AppColors.ink;
+    final secondary = dark ? const Color(0xffaab4c0) : AppColors.body;
+    final border = dark ? const Color(0xff303744) : AppColors.border;
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(color: Color(0x0d000000), offset: Offset(0, 2), blurRadius: 8),
-        ],
+        color: dark ? const Color(0xff131722) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: border),
+        boxShadow: const [BoxShadow(color: Color(0x06141e30), blurRadius: 16, offset: Offset(0, 4))],
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 520;
-          return Column(
-            children: [
-              Row(
-                children: [
-                  const Text(
-                    'LIVE CHART',
-                    style: TextStyle(
-                      color: AppColors.label,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: .7,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      market.tradingViewSymbol,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    tooltip: '시간봉 선택',
-                    initialValue: interval,
-                    onSelected: onIntervalChanged,
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(value: '15', child: Text('15분')),
-                      PopupMenuItem(value: '60', child: Text('1시간')),
-                      PopupMenuItem(value: '240', child: Text('4시간')),
-                      PopupMenuItem(value: 'D', child: Text('일봉')),
-                      PopupMenuItem(value: 'W', child: Text('주봉')),
-                    ],
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 5,
-                      ),
-                      color: const Color(0xfff2f4f5),
-                      child: Text(
-                        interval,
-                        style: const TextStyle(
-                          color: AppColors.ink,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
+      child: LayoutBuilder(builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 700 && MediaQuery.textScalerOf(context).scale(14) < 20;
+        return Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+            child: Row(children: [
+              Expanded(child: Text('가격 차트', style: TextStyle(color: foreground, fontSize: 14, fontWeight: FontWeight.w700))),
+              if (wide)
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  for (final entry in _intervals.entries)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: TextButton(
+                        onPressed: () => onIntervalChanged(entry.key),
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(44, 40),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          foregroundColor: interval == entry.key ? (dark ? AppColors.green : AppColors.greenInk) : secondary,
+                          backgroundColor: interval == entry.key ? (dark ? const Color(0xff223b30) : AppColors.greenWash) : Colors.transparent,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                         ),
+                        child: Text(entry.value),
                       ),
                     ),
+                ])
+              else
+                PopupMenuButton<String>(
+                  tooltip: '시간봉 선택', initialValue: interval,
+                  onSelected: onIntervalChanged,
+                  itemBuilder: (context) => _intervals.entries.map((entry) =>
+                    PopupMenuItem(value: entry.key, child: Text(entry.value)),
+                  ).toList(),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text(_intervals[interval] ?? interval, style: TextStyle(color: foreground, fontSize: 14, fontWeight: FontWeight.w600)),
+                      Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: secondary),
+                    ]),
                   ),
-                  IconButton(
-                    tooltip: theme == ChartThemePreference.light
-                        ? '다크 차트'
-                        : '라이트 차트',
-                    onPressed: onThemeChanged,
-                    visualDensity: VisualDensity.compact,
-                    icon: Icon(
-                      theme == ChartThemePreference.light
-                          ? Icons.dark_mode_outlined
-                          : Icons.light_mode_outlined,
-                      size: 17,
-                      color: AppColors.body,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: '차트 전체화면',
-                    onPressed: onFullScreen,
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(
-                      Icons.fullscreen_rounded,
-                      size: 20,
-                      color: AppColors.ink,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: compact ? 4 : 6),
-              Expanded(
-                child: TradingViewChart(
-                  key: ValueKey(
-                    '${market.tradingViewSymbol}-$interval-${theme.name}',
-                  ),
-                  symbol: market.tradingViewSymbol,
-                  interval: interval,
-                  theme: theme.name,
                 ),
+              const SizedBox(width: 6),
+              IconButton(
+                tooltip: dark ? '밝은 차트로 변경' : '어두운 차트로 변경',
+                onPressed: onThemeChanged,
+                icon: Icon(dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined, size: 19, color: secondary),
               ),
-            ],
-          );
-        },
-      ),
+              IconButton(
+                tooltip: '차트 전체화면', onPressed: onFullScreen,
+                icon: Icon(Icons.fullscreen_rounded, size: 22, color: secondary),
+              ),
+            ]),
+          ),
+          Divider(height: 1, color: border),
+          Expanded(child: Padding(
+            padding: const EdgeInsets.all(1),
+            child: TradingViewChart(
+              key: ValueKey('${market.tradingViewSymbol}-$interval-${theme.name}'),
+              symbol: market.tradingViewSymbol, interval: interval, theme: theme.name,
+            ),
+          )),
+          Divider(height: 1, color: border),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(children: [
+              Icon(Icons.schedule_rounded, size: 14, color: secondary),
+              const SizedBox(width: 6),
+              Expanded(child: Text('거래소에 따라 시세가 지연될 수 있습니다.',
+                style: TextStyle(color: secondary, fontSize: 12, height: 1.4))),
+              if (wide) Text('TradingView · KST', style: TextStyle(color: secondary, fontSize: 12)),
+            ]),
+          ),
+        ]);
+      }),
     );
   }
 }

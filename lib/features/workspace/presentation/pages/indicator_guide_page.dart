@@ -16,26 +16,27 @@ class IndicatorGuidePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 1100
+        final enlarged = MediaQuery.textScalerOf(context).scale(14) > 20;
+        final columns = !enlarged && constraints.maxWidth >= 1100
             ? 3
-            : constraints.maxWidth >= 680
+            : !enlarged && constraints.maxWidth >= 760
                 ? 2
                 : 1;
         return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+          padding: const EdgeInsets.all(24),
           children: [
             const Text(
-              'SIGNAL LIBRARY',
+              'INDICATOR GUIDE',
               style: TextStyle(
-                color: AppColors.green,
-                fontSize: 10,
+                color: AppColors.greenInk,
+                fontSize: 14,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.1,
               ),
             ),
             const SizedBox(height: 6),
             const Text(
-              '6개 보조지표 사용 가이드',
+              '분석에 필요한 여섯 가지 관점',
               style: TextStyle(
                 color: AppColors.ink,
                 fontSize: 24,
@@ -45,8 +46,8 @@ class IndicatorGuidePage extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             const Text(
-              '계산 방식·해석·주의점을 확인하고 차트 작업공간의 선택 상태에 추가할 수 있습니다.',
-              style: TextStyle(color: AppColors.body, fontSize: 12),
+              '지표의 계산 방식과 해석을 살펴보고, 나의 분석 설정에 저장하세요.',
+              style: TextStyle(color: AppColors.body, fontSize: 14),
             ),
             const SizedBox(height: 16),
             Container(
@@ -58,32 +59,28 @@ class IndicatorGuidePage extends StatelessWidget {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '선택 상태와 설명은 구현되어 있습니다. TradingView 차트에 자체 계산선을 렌더링하려면 Advanced Charts 라이선스와 시세 Datafeed 연동이 추가로 필요합니다.',
-                      style: TextStyle(color: AppColors.label, fontSize: 11),
+                      '선택한 지표는 저장됩니다. 차트 내 지표 표시는 아직 지원하지 않습니다.',
+                      style: TextStyle(color: AppColors.label, fontSize: 14),
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 14),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: columns,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: columns == 1 ? .9 : 1.03,
-              ),
-              itemCount: IndicatorGuideEntry.entries.length,
-              itemBuilder: (context, index) {
-                final entry = IndicatorGuideEntry.entries[index];
-                return _IndicatorGuideCard(
-                  entry: entry,
-                  selected: controller.activeIndicators.contains(entry.id),
-                  onToggle: () => controller.toggleIndicator(entry.id),
-                );
-              },
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                for (final entry in IndicatorGuideEntry.entries)
+                  SizedBox(
+                    width: (constraints.maxWidth - 48 - (columns - 1) * 16) / columns,
+                    child: _IndicatorGuideCard(
+                      entry: entry,
+                      selected: controller.activeIndicators.contains(entry.id),
+                      onToggle: () => controller.toggleIndicator(entry.id),
+                    ),
+                  ),
+              ],
             ),
           ],
         );
@@ -106,9 +103,10 @@ class _IndicatorGuideCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: selected ? AppColors.green : AppColors.border,
           width: selected ? 1.5 : 1,
@@ -127,7 +125,7 @@ class _IndicatorGuideCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: AppColors.muted,
-                    fontSize: 9,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
                     letterSpacing: .6,
                   ),
@@ -142,7 +140,7 @@ class _IndicatorGuideCard extends StatelessWidget {
             entry.name,
             style: const TextStyle(
               color: AppColors.ink,
-              fontSize: 16,
+              fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -150,21 +148,21 @@ class _IndicatorGuideCard extends StatelessWidget {
           Text(
             entry.formula,
             style: const TextStyle(
-              color: AppColors.green,
-              fontSize: 10,
+              color: AppColors.greenInk,
+              fontSize: 14,
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 10),
           Text(
             entry.summary,
-            style: const TextStyle(color: AppColors.body, fontSize: 11, height: 1.45),
+            style: const TextStyle(color: AppColors.body, fontSize: 14, height: 1.655),
           ),
           const SizedBox(height: 9),
           _GuideDetail(label: '해석', text: entry.interpretation),
           const SizedBox(height: 7),
           _GuideDetail(label: '주의', text: entry.caution),
-          const Spacer(),
+          const SizedBox(height: 22),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -173,14 +171,14 @@ class _IndicatorGuideCard extends StatelessWidget {
                 selected ? Icons.remove_circle_outline : Icons.add_circle_outline,
                 size: 16,
               ),
-              label: Text(selected ? '차트 선택에서 해제' : '차트 선택에 추가'),
+              label: Text(selected ? '선택 해제' : '내 지표에 추가'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.ink,
                 side: BorderSide(
                   color: selected ? AppColors.green : AppColors.border,
                 ),
-                shape: const RoundedRectangleBorder(),
-                textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -208,10 +206,8 @@ class _GuideDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RichText(
-      maxLines: 3,
-      overflow: TextOverflow.ellipsis,
       text: TextSpan(
-        style: const TextStyle(color: AppColors.body, fontSize: 10, height: 1.4),
+        style: const TextStyle(color: AppColors.body, fontSize: 14, height: 1.4),
         children: [
           TextSpan(
             text: '$label  ',

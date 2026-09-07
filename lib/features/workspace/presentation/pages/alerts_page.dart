@@ -11,101 +11,53 @@ class AlertsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'ALERT CENTER',
-                      style: TextStyle(
-                        color: AppColors.green,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.1,
-                      ),
-                    ),
-                    SizedBox(height: 6),
-                    Text(
-                      '가격·지표 알림',
-                      style: TextStyle(
-                        color: AppColors.ink,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              FilledButton.icon(
-                onPressed: () => _createAlert(context),
-                icon: const Icon(Icons.add_alert_outlined, size: 17),
-                label: const Text('알림 만들기'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.ink,
-                  foregroundColor: Colors.white,
-                  shape: const RoundedRectangleBorder(),
-                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
+
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('ALERT CENTER', style: TextStyle(color: AppColors.greenInk, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.1)),
+            SizedBox(height: 8),
+            Text('나의 알림', style: TextStyle(color: AppColors.ink, fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -.6)),
+          ])),
+          FilledButton.icon(
+            onPressed: () => _createAlert(context),
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('새 알림'),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.ink, foregroundColor: Colors.white),
           ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(12),
-            color: controller.apiConfigured
-                ? const Color(0xffeefaf2)
-                : const Color(0xfffff7df),
-            child: Row(
-              children: [
-                Icon(
-                  controller.apiConfigured
-                      ? Icons.dns_outlined
-                      : Icons.pause_circle_outline,
-                  size: 17,
-                  color: controller.apiConfigured
-                      ? AppColors.green
-                      : const Color(0xffa56b00),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    controller.apiConfigured
-                        ? '백엔드 주소가 연결되어 있습니다. 실제 자동 판정은 시세 공급자 설정 후 활성화됩니다.'
-                        : '현재 규칙은 기기에 저장됩니다. 자동 감시를 시작하려면 백엔드 주소와 시세 API를 연결해야 합니다.',
-                    style: const TextStyle(color: AppColors.label, fontSize: 11),
-                  ),
-                ),
-              ],
+        ]),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: const Color(0xfffff7df), borderRadius: BorderRadius.circular(8)),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Icon(Icons.info_outline_rounded, size: 18, color: Color(0xff9a6810)),
+            const SizedBox(width: 10),
+            Expanded(child: Text(
+              controller.apiConfigured
+                ? '자동 감시의 작동 여부는 현재 확인할 수 없습니다. 알림 규칙을 저장하고 테스트할 수 있습니다.'
+                : '알림 규칙은 이 기기에 저장됩니다. 현재 자동 감시는 제공되지 않습니다.',
+              style: const TextStyle(color: AppColors.label, fontSize: 14, height: 1.6),
+            )),
+          ]),
+        ),
+        const SizedBox(height: 16),
+        if (controller.alerts.isEmpty)
+          _EmptyAlerts(onCreate: () => _createAlert(context))
+        else
+          for (final alert in controller.alerts)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _AlertRuleCard(
+                alert: alert,
+                onToggle: () => controller.toggleAlert(alert),
+                onTest: () => controller.testAlert(alert),
+                onDelete: () => controller.removeAlert(alert),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: controller.alerts.isEmpty
-                ? _EmptyAlerts(onCreate: () => _createAlert(context))
-                : ListView.separated(
-                    itemCount: controller.alerts.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final alert = controller.alerts[index];
-                      return _AlertRuleCard(
-                        alert: alert,
-                        onToggle: () => controller.toggleAlert(alert),
-                        onTest: () => controller.testAlert(alert),
-                        onDelete: () => controller.removeAlert(alert),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -135,7 +87,8 @@ class _EmptyAlerts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 64),
+      decoration: BoxDecoration(color: Colors.white, border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(12)),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -152,8 +105,9 @@ class _EmptyAlerts extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             const Text(
-              '목표 가격 또는 6개 지표 신호를 기준으로 규칙을 만들어 보세요.',
-              style: TextStyle(color: AppColors.body, fontSize: 11),
+              '관심종목의 목표 가격이나 지표 조건을 저장해 보세요.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.body, fontSize: 14),
             ),
             const SizedBox(height: 14),
             TextButton(onPressed: onCreate, child: const Text('첫 알림 만들기')),
@@ -185,66 +139,40 @@ class _AlertRuleCard extends StatelessWidget {
       PriceAlertType.indicatorBuy => '${_indicatorName(alert.indicatorId)} 매수 신호',
       PriceAlertType.indicatorSell => '${_indicatorName(alert.indicatorId)} 매도 신호',
     };
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.white,
+        border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(10)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
           Container(
-            width: 36,
-            height: 36,
-            alignment: Alignment.center,
-            color: alert.enabled
-                ? const Color(0xffeefaf2)
-                : const Color(0xfff2f4f5),
-            child: Icon(
-              Icons.notifications_active_outlined,
-              size: 18,
-              color: alert.enabled ? AppColors.green : AppColors.muted,
-            ),
+            width: 40, height: 40,
+            decoration: BoxDecoration(color: alert.enabled ? AppColors.greenWash : AppColors.surfaceMuted,
+              borderRadius: BorderRadius.circular(10)),
+            child: Icon(Icons.notifications_active_outlined, size: 20,
+              color: alert.enabled ? AppColors.greenInk : AppColors.muted),
           ),
           const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  alert.name,
-                  style: const TextStyle(
-                    color: AppColors.ink,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  '${alert.symbol}  ·  $condition',
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppColors.body, fontSize: 10),
-                ),
-              ],
-            ),
+          Expanded(child: Text(alert.name, style: const TextStyle(color: AppColors.ink, fontSize: 16, fontWeight: FontWeight.w700))),
+          Semantics(
+            label: '알림 활성화',
+            child: Switch.adaptive(value: alert.enabled, activeTrackColor: AppColors.greenInk, onChanged: (_) => onToggle()),
           ),
-          IconButton(
-            tooltip: '알림 테스트',
-            onPressed: onTest,
-            icon: const Icon(Icons.play_circle_outline, size: 19),
-          ),
-          Switch.adaptive(
-            value: alert.enabled,
-            activeTrackColor: AppColors.green,
-            onChanged: (_) => onToggle(),
-          ),
-          IconButton(
-            tooltip: '삭제',
-            onPressed: onDelete,
-            icon: const Icon(Icons.delete_outline, size: 19, color: AppColors.muted),
-          ),
-        ],
-      ),
+        ]),
+        const SizedBox(height: 14),
+        Text('${alert.symbol} · $condition', style: const TextStyle(color: AppColors.body, fontSize: 14, height: 1.6)),
+        const SizedBox(height: 12),
+        const Divider(height: 1),
+        const SizedBox(height: 6),
+        Wrap(alignment: WrapAlignment.end, spacing: 8, children: [
+          TextButton.icon(onPressed: onTest,
+            icon: const Icon(Icons.play_circle_outline_rounded, size: 18), label: const Text('테스트')),
+          TextButton.icon(onPressed: onDelete,
+            style: TextButton.styleFrom(foregroundColor: AppColors.body),
+            icon: const Icon(Icons.delete_outline_rounded, size: 18), label: const Text('삭제')),
+        ]),
+      ]),
     );
   }
 
@@ -386,7 +314,7 @@ class _CreateAlertDialogState extends State<_CreateAlertDialog> {
           onPressed: _submit,
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.ink,
-            shape: const RoundedRectangleBorder(),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
           child: const Text('저장'),
         ),
