@@ -27,7 +27,7 @@ class TradingViewWorkspacePage extends StatefulWidget {
 
 class _TradingViewWorkspacePageState extends State<TradingViewWorkspacePage> {
   late final PulseWorkspaceController _workspaceController;
-  _WorkspaceSection _activeSection = _WorkspaceSection.chart;
+  _WorkspaceSection _activeSection = _WorkspaceSection.introduction;
 
   @override
   void initState() {
