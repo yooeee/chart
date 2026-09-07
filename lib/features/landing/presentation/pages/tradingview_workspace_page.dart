@@ -244,9 +244,13 @@ class _TradingViewChartPage extends StatelessWidget {
                   contentPadding: const EdgeInsets.symmetric(vertical: 4),
                   leading: MarketAvatar(market: market),
                   onTap: () async {
-                    if (!saved) await controller.toggleWatchlist(market);
+                    if (!saved) {
+                      await controller.toggleWatchlist(market);
+                    }
                     onMarketChanged(market);
-                    if (context.mounted) Navigator.pop(context);
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
                   },
                   title: Text(market.displayName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                   subtitle: Text('${market.exchange} · ${market.ticker}', style: const TextStyle(color: AppColors.body, fontSize: 12)),
